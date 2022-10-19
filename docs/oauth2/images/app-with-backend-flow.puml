@@ -1,0 +1,80 @@
+@startuml
+
+participant "App" as APP
+participant "TruID App" as TID
+participant "Backend" as BE
+participant "TruID REST API" as API
+
+autonumber 1
+
+autonumber resume "<b>C-0"
+APP -> BE: https://example.com/confirm-signup
+
+BE --> APP: 200 OK
+note right
+  Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+end note
+
+autonumber resume "<b>O-0"
+APP -> TID : https://api.truid.app/oauth2/v1/authorize/confirm-signup
+note right
+  response_type=code
+  client_id=123
+  scope=veritru.me/claim/email/v1
+  redirect_uri=https://example.com/continue-signup
+  state=ABC
+  nonce=DEF
+end note
+
+autonumber stop
+TID -> TID: Secure Identity
+
+autonumber resume "<b>O-0"
+TID -> APP : https://example.com/continue-signup
+note right
+  code=XYZ
+  state=ABC
+  nonce=DEF
+end note
+
+autonumber resume "<b>C-0"
+APP -> BE: https://example.com/continue-signup
+note right
+  code=XYZ
+  state=SABC
+  nonce=NABC
+end note
+
+autonumber resume "<b>O-0"
+BE -> API: https://api.truid.app/oauth2/v1/token
+note right
+  grant_type=authorization_code
+  code=XYZ
+  redirect_uri=https://example.com/continue-signup
+  client_id=123
+  client_secret=ABC
+end note
+
+autonumber resume "<b>O-0"
+API --> BE : 200 OK
+note right
+  access_token=ACCESS-ABCDEF
+  token_type=bearer
+  expires_in=3600
+  refresh_token=REFRESH-ABCDEF
+  scope=veritru.me/claim/email/v1
+end note
+
+autonumber resume "<b>C-0"
+BE --> APP: 200 OK
+
+...
+
+autonumber resume "<b>V-0"
+BE -> API: https://api.truid.app/oidc/v1/user-info
+note right
+  Bearer: ACCESS-ABCDEF
+end note
+API --> BE: 200 OK
+
+@enduml
