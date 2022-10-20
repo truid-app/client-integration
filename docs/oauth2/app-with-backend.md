@@ -10,6 +10,8 @@ TODO: add publish script that publishes to truid.app or to github.com pages
 
 TBD: Overview, description of usecase and reference to oauth2 code flow
 
+![app-with-backend-flow](images/app-with-backend-flow.svg)
+
 TBD: include image app-with-backend.puml
 
 TBD: description of each of the steps in the diagram. - Link to RFC/oauth.net
