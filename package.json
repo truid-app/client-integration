@@ -1,0 +1,16 @@
+{
+  "name": "@veritru/client-integration",
+  "version": "0.1.0",
+  "description": "Client integration documentation and examples",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+  }
+}
