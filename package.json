@@ -7,13 +7,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "build": "mkdir -p ./build && yarn run build:puml",
+    "build": "mkdir -p ./build && yarn run build:puml && yarn run build:html",
     "build:puml": "for f in $(find docs -name '*.puml') ; do mkdir -p build/$(dirname $f) && puml generate --svg -o build/${f%.puml}.svg $f ; done",
+    "build:html": "for f in $(find docs -name '*.md') ; do mkdir -p build/$(dirname $f) && showdown makehtml -i $f -o build/${f%.md}.html --flavor github -c completeHTMLDocument ; done",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "node-plantuml": "^0.9.0"
+    "node-plantuml": "^0.9.0",
+    "showdown": "^2.1.0"
   }
 }
