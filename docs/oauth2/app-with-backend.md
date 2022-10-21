@@ -8,6 +8,12 @@ TODO: Include generated REST API documentation when building
 TODO: add publish script that publishes to truid.app or to github.com pages
 -->
 
+```mermaid
+sequenceDiagram
+  Alice -> Bob: POST /hello
+  Bob --> Alice: OK
+```
+
 TBD: Overview, description of usecase and reference to oauth2 code flow
 
 ![app-with-backend-flow](images/app-with-backend-flow.svg)
