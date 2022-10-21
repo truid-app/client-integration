@@ -40,9 +40,9 @@ sequenceDiagram
 
   BE -->> APP: C:4: 200 OK
 
-  BE ->> API: O-5: https://api.truid.app/oidc/v1/user-info
-  note over BE,API: Bearer: ACCESS-ABCDEF
-  API -->> BE: O-6: 200 OK
+  BE ->> API: O-5: https://api.truid.app/oidc/v1/user-info3
+  note over BE,API: Bearer: ACCESS-ABCDEF34
+  API -->> BE: O-6: 200 OK 44
 ```
 
 TBD: Overview, description of usecase and reference to oauth2 code flow
