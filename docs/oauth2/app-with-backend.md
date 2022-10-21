@@ -10,8 +10,39 @@ TODO: add publish script that publishes to truid.app or to github.com pages
 
 ```mermaid
 sequenceDiagram
-  Alice -> Bob: POST /hello
-  Bob --> Alice: OK
+
+  participant APP as App
+  participant TID as TruID App
+  participant BE as Backend
+  participant API as TruID REST API
+
+  APP ->> BE: C-1: https://example.com/confirm-signup
+
+  BE -->> APP: C-2: 200 OK
+  note over APP,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+
+  APP ->> TID: O-1: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/continue-signup<br/>state=ABC<br/>nonce=DEF
+
+  TID ->> TID: Secure Identity
+
+  TID ->> APP: O-2: https://example.com/continue-signup
+  note over TID,APP: code=XYZ<br/>state=ABC<br/>nonce=DEF
+
+  APP ->> BE: C-3: https://example.com/continue-signup
+  note over APP,BE: code=XYZ<br/>state=SABC<br/>nonce=NABC
+
+  BE ->> API: O-3: https://api.truid.app/oauth2/v1/token
+  note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/continue-signup<br/>client_id=123<br/>client_secret=ABC
+
+  API -->> BE: O-4: 200 OK
+  note over API,BE: access_token=ACCESS-ABCDEF<br/>token_type=bearer<br/>expires_in=3600<br/>refresh_token=REFRESH-ABCDEF<br/>scope=veritru.me/claim/email/v1
+
+  BE -->> APP: C:4: 200 OK
+
+  BE ->> API: O-5: https://api.truid.app/oidc/v1/user-info
+  note over BE,API: Bearer: ACCESS-ABCDEF
+  API -->> BE: O-6: 200 OK
 ```
 
 TBD: Overview, description of usecase and reference to oauth2 code flow
