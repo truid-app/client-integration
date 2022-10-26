@@ -8,7 +8,7 @@ This flow uses the OAuth2 Authorization Code Grant to allow the user to authoriz
 
 _Notes:_
 
-TruID is currently not using the PKCE extension to the OAuth2 Authorization Code Grant. This will however be required at some point in the future.
+TruID is currently not using the [PKCE extension](https://oauth.net/2/pkce/) to the OAuth2 Authorization Code Grant. This will however be required at some point in the future.
 
 Documentation about different TruID flows:
 - TBD: Link to documentation about confirm-signup, single transaction, login, ...
@@ -36,15 +36,15 @@ sequenceDiagram
   note over APP,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
 
   APP ->> TID: O-1: https://api.truid.app/oauth2/v1/authorize/confirm-signup
-  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/continue-signup<br/>state=ABC<br/>nonce=DEF
+  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/continue-signup<br/>state=ABC
 
   TID ->> TID: Secure Identity
 
   TID ->> APP: O-2: https://example.com/continue-signup
-  note over TID,APP: code=XYZ<br/>state=ABC<br/>nonce=DEF
+  note over TID,APP: code=XYZ<br/>state=ABC
 
   APP ->> BE: C-3: https://example.com/continue-signup
-  note over APP,BE: code=XYZ<br/>state=SABC<br/>nonce=NABC
+  note over APP,BE: code=XYZ<br/>state=ABC
 
   BE ->> API: O-3: https://api.truid.app/oauth2/v1/token
   note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/continue-signup<br/>client_id=123<br/>client_secret=ABC
@@ -79,13 +79,13 @@ sequenceDiagram
 
 &nbsp; &nbsp; *O-3:* The backend is using the code to get an access token from TruID
 
-&nbsp; &nbsp; *O-4:* The TruID backend is returning an access token
+&nbsp; &nbsp; *O-4:* The TruID API is returning an access token
 
 &nbsp; &nbsp; *C-4:* The backend is returning a response to the app, confirming that the flow is complete
 
 &nbsp; &nbsp; *O-5:* The backend uses the access token to fetch data from the TruID API
 
-&nbsp; &nbsp; *O-6:* The TruID backend returns data about the user
+&nbsp; &nbsp; *O-6:* The TruID API returns data about the user
 
 ## Integrarion
 
@@ -113,7 +113,7 @@ Add an endpoint in the backend which has the purpose of creating an Authorizatio
 
 The Authorization Request URL follows the OAuth2 standard for an Authorization Request. The URL will point to different endpoints in the TruID API depending on which TruID Authorization Flow that should be started.
 
-To start a TruID Confitrm Signup flow, the Authorization Request URL should point to `https://api.truid.app/oauth2/v1/authorization/confim-signup`.
+To start a TruID Confirm Signup flow, the Authorization Request URL should point to `https://api.truid.app/oauth2/v1/authorization/confim-signup`.
 
 TBD: Link to TruID API specification for authorization URL
 
@@ -129,7 +129,7 @@ The `state` parameter must be used to prevent cross-site request forgery, see [R
 
 _Example:_
 
-`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https://example.com/continue-signup&state=123456&nonce=123456`
+`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https://example.com/continue-signup&state=123456`
 
 _Links:_
 
