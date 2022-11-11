@@ -127,6 +127,8 @@ The `scope` parameter must be a subset of the claims that were given when config
 
 The `state` parameter must be used to prevent cross-site request forgery, see [RFC-6749 Section 10.12](https://www.rfc-editor.org/rfc/rfc6749#section-10.12).
 
+Some clients, such as `react-native` based apps, have problems with manual handling of redirection responses, and in those cases it might make sense to return the authorization URL in a 2xx response. See TBD: link to example code
+
 _Example:_
 
 `https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https%3A%2F%2Fexample.com%2Fcomplete-signup&state=123456`
@@ -136,7 +138,7 @@ _Links:_
 - [RFC-6749 - Authorization Request](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.1)
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - TBD: Link to TruID API specification
-- TBD: Link to code example
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruIDSignupFlow.kt#L32-L32)
 
 ### 3. Fetch authorization URL and rediect to TruID
 

@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Demo Backend
+  version: '1.0'
+  description: |
+    Demo Backend Signup API
+    
+    TBD: Link to documentation website
+servers:
+  - url: https://example.truid.app/truid/v1/
+    description: example
+
+paths:
+  '/confirm-signup':
+    get:
+      description: |
+        Create an URL to use towards the TruID API to start the Signup flow
+      parameters:
+        - name: X-Requested-With
+          description: |
+            This header should be set if the client cannot handle manual redirect
+            on 302 responses, and would rather want a 202 response.
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [XMLHttpRequest]
+      responses:
+        '302':
+          description: |
+            Returning an URL that the client should redirect to in order to
+            start a TruID Signup flow
+          headers:
+            Location:
+              description: URL to redirect to for TruID Signup flow
+              schema:
+                type: string
+        '202':
+          description: |
+            A 202 response is returned instead of a 302 response if the client
+            is passing the header `X-Requested-With: XMLHttpRequest`. This is
+            used because some clients cannot handle manual redirect on 302
+            responses.
+            
+            A 202 response is to be treated exactly as a 302 response.
+          headers:
+            Location:
+              description: URL to redirect to for TruID Signup flow
+              schema:
+                type: string
