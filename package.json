@@ -1,5 +1,5 @@
 {
-  "name": "@veritru/client-integration",
+  "name": "@truid-app/client-integration",
   "version": "0.1.0",
   "description": "Client integration documentation and examples",
   "main": "index.js",
