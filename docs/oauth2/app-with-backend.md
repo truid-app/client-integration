@@ -14,9 +14,9 @@ Documentation about different TruID flows:
 - TBD: Link to documentation about confirm-signup, single transaction, login, ...
 
 Standards:
-- https://www.rfc-editor.org/rfc/rfc6749#section-4.1
-- https://oauth.net/2/
-- https://oauth.net/2/grant-types/authorization-code/
+- [RFC 6749 - Authorization Code Grant](https://www.rfc-editor.org/rfc/rfc6749#section-4.1)
+- [OAuth2 on oauth.net](https://oauth.net/2/)
+- [Authorization Code Grant on oauth.net](https://oauth.net/2/grant-types/authorization-code/)
 
 ## Flow
 
@@ -35,28 +35,28 @@ sequenceDiagram
   BE -->> APP: C-2: 200 OK
   note over APP,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
 
-  APP ->> TID: O-1: https://api.truid.app/oauth2/v1/authorize/confirm-signup
-  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/continue-signup<br/>state=ABC
+  APP ->> TID: O-3: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/complete-signup<br/>state=ABC
 
   TID ->> TID: Secure Identity
 
-  TID ->> APP: O-2: https://example.com/continue-signup
+  TID ->> APP: O-4: https://example.com/complete-signup
   note over TID,APP: code=XYZ<br/>state=ABC
 
-  APP ->> BE: C-3: https://example.com/continue-signup
+  APP ->> BE: C-5: https://example.com/complete-signup
   note over APP,BE: code=XYZ<br/>state=ABC
 
-  BE ->> API: O-3: https://api.truid.app/oauth2/v1/token
-  note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/continue-signup<br/>client_id=123<br/>client_secret=ABC
+  BE ->> API: O-6: https://api.truid.app/oauth2/v1/token
+  note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/complete-signup<br/>client_id=123<br/>client_secret=ABC
 
-  API -->> BE: O-4: 200 OK
+  API -->> BE: O-7: 200 OK
   note over API,BE: access_token=ACCESS-ABCDEF<br/>token_type=bearer<br/>expires_in=3600<br/>refresh_token=REFRESH-ABCDEF<br/>scope=veritru.me/claim/email/v1
 
-  BE -->> APP: C:4: 200 OK
+  BE -->> APP: C-8: 200 OK
 
-  BE ->> API: O-5: https://api.truid.app/oidc/v1/user-info
+  BE ->> API: O-9: https://api.truid.app/oidc/v1/user-info
   note over BE,API: Bearer: ACCESS-ABCDEF
-  API -->> BE: O-6: 200 OK
+  API -->> BE: O-10: 200 OK
 ```
 
 #### Legend
@@ -71,21 +71,21 @@ sequenceDiagram
 
 &nbsp; &nbsp; *C-2:* Return authorization URL
 
-&nbsp; &nbsp; *O-1:* The app is requesting access from TruID. This request is opening the TruID App which is used for authenticating the user.
+&nbsp; &nbsp; *O-3:* The app is requesting access from TruID. This request is opening the TruID App which is used for authenticating the user.
 
-&nbsp; &nbsp; *O-2:* The TruID App is redirecting back to the app with a code that can be used to get an access token
+&nbsp; &nbsp; *O-4:* The TruID App is redirecting back to the app with a code that can be used to get an access token
 
-&nbsp; &nbsp; *C-3:* The app is completing the flow by sending the code to the backend
+&nbsp; &nbsp; *C-5:* The app is completing the flow by sending the code to the backend
 
-&nbsp; &nbsp; *O-3:* The backend is using the code to get an access token from TruID
+&nbsp; &nbsp; *O-6:* The backend is using the code to get an access token from TruID
 
-&nbsp; &nbsp; *O-4:* The TruID API is returning an access token
+&nbsp; &nbsp; *O-7:* The TruID API is returning an access token
 
-&nbsp; &nbsp; *C-4:* The backend is returning a response to the app, confirming that the flow is complete
+&nbsp; &nbsp; *C-8:* The backend is returning a response to the app, confirming that the flow is complete
 
-&nbsp; &nbsp; *O-5:* The backend uses the access token to fetch data from the TruID API
+&nbsp; &nbsp; *O-9:* The backend uses the access token to fetch data from the TruID API
 
-&nbsp; &nbsp; *O-6:* The TruID API returns data about the user
+&nbsp; &nbsp; *O-10:* The TruID API returns data about the user
 
 ## Integrarion
 
@@ -109,7 +109,7 @@ _Links:_
 
 ### 2. Create endpoint for authorization URL
 
-Add an endpoint in the backend which has the purpose of creating an Authorization Request URL, and redirect the app to this URL. This corresponds to the steps _C-1_ and _C-2_ in the flow above. The returned Authoization Request URL will then be used in step _O-1_ in the flow above.
+Add an endpoint in the backend which has the purpose of creating an Authorization Request URL, and redirect the app to this URL. This corresponds to the steps _C-1_ and _C-2_ in the flow above. The returned Authoization Request URL will then be used in step _O-3_ in the flow above.
 
 The Authorization Request URL follows the OAuth2 standard for an Authorization Request. The URL will point to different endpoints in the TruID API depending on which TruID Authorization Flow that should be started.
 
@@ -129,19 +129,18 @@ The `state` parameter must be used to prevent cross-site request forgery, see [R
 
 _Example:_
 
-`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https://example.com/continue-signup&state=123456`
+`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https%3A%2F%2Fexample.com%2Fcomplete-signup&state=123456`
 
 _Links:_
 
-- https://www.rfc-editor.org/rfc/rfc6749#section-4.1.1
-- https://www.rfc-editor.org/rfc/rfc6749#section-10.12
+- [RFC-6749 - Authorization Request](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.1)
+- [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - TBD: Link to TruID API specification
 - TBD: Link to code example
 
-
 ### 3. Fetch authorization URL and rediect to TruID
 
-Start the Authorization Flow from the app, by sending a request to the endpoint created in step 2 and fetch the Authorization Request URL. The app should open this URL, which should trigger the TruID App to be opened. This corresponds to step _O-1_ in the flow above.
+Start the Authorization Flow from the app, by sending a request to the endpoint created in step 2 and fetch the Authorization Request URL. The app should open this URL, which should trigger the TruID App to be opened. This corresponds to step _O-3_ in the flow above.
 
 _Links:_
 
@@ -149,24 +148,24 @@ _Links:_
 
 ### 4. Add Deep Linking for redirect URI
 
-Once the TruID App has authenticated the user and the user has given consent to share data with the service, the TruID App will redirect back to the app using the redirect URI. This is the URI given in the `redirect_uri` parameter in the Authorization Request created in step 2, and must match exactly the redirect URI that is configured in step 1. This corresponds to step _O-2_ in the flow above.
+Once the TruID App has authenticated the user and the user has given consent to share data with the service, the TruID App will redirect back to the app using the redirect URI. This is the URI given in the `redirect_uri` parameter in the Authorization Request created in step 2, and must match exactly the redirect URI that is configured in step 1. This corresponds to step _O-4_ in the flow above.
 
 This URI must be a `https` URL, and the app must be associated with the domain. On Android the URL should work as an [Android App Link](https://developer.android.com/training/app-links) to open the app, and on iOS it should works as an [Universal Link](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content) to open the app.
 
-When the app is opened by the redirect URI deep link, it should send a request to the backend endpoint, described in step 5, to complete the authorization process. This corresponds to step C-3 in the flow above. It must pass on all parameters from the received redirect URI. This URI will contain a number of parameters, for example an authorization code that the backend should use to request an access token from the TruID API.
+When the app is opened by the redirect URI deep link, it should send a request to the backend endpoint, described in step 5, to complete the authorization process. This corresponds to step _C-5_ in the flow above. It must pass on all parameters from the received redirect URI. This URI will contain a number of parameters, for example an authorization code that the backend should use to request an access token from the TruID API.
 
 _Links:_
 
-- https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
-- https://developer.android.com/training/app-links
-- https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content
+- [RFC-6749 - Authorization Response](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2)
+- [Android - App Links](https://developer.android.com/training/app-links)
+- [iOS - Universal Links](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content)
 - TBD: link to example code
 
 ### 5. Add endpoint for completing authorization
 
-Add an endpoint for completing the authorization. This corresponds to step _C-3_ in the flow above.
+Add an endpoint for completing the authorization. This corresponds to step _C-5_ in the flow above.
 
-The service should invoke the TruID API token endpoint to complete the authorization flow, and to exchange the code into an access token and a refresh token. This corresponds to step _O-3_ and _O-4_ in the flow above.
+The service should invoke the TruID API token endpoint to complete the authorization flow, and to exchange the code into an access token and a refresh token. This corresponds to step _O-6_ and _O-7_ in the flow above.
 
 The returned access token can be used to request user data from the TruID API. The access token represents users consent to share data with the service. The expiry time of the access token will be quite short, and the service should not store the access token after it has completed processing of the request.
 
@@ -182,17 +181,17 @@ If the user cancels the authorization request, or if there is any other error du
 
 _Links:_
 
-- https://www.oauth.com/oauth2-servers/access-tokens/authorization-code-request/
-- https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
-- https://www.rfc-editor.org/rfc/rfc6749#section-10.12
+- [RFC-6749 - Access Token Request](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3)
+- [Authorization Code Request on oauth.net](https://www.oauth.com/oauth2-servers/access-tokens/authorization-code-request/)
+- [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - TBD: link to TruID API documentation
 - TBD: link to code example
 
 ### 6. Access the TruID User Info endpoint
 
-When the service want to use user data from TruID it should use the stored refresh token to get a new access token, and then use the access token to fetch the user data from the TruID API. This corresponds to the steps _O-5_ and _O-6_ in the flow above.
+When the service want to use user data from TruID it should use the stored refresh token to get a new access token, and then use the access token to fetch the user data from the TruID API. This corresponds to the steps _O-9_ and _O-10_ in the flow above.
 
-The TruID API contains several endpoints to fetch user data. There is one endpoint that returns user data in a proprietary format which contains more information about each data point, but the TruID API also contains and endpoint that produces data in the OIDC user-info format, as well as a few other formats.
+The TruID API contains several endpoints that supports multiple formats to fetch user data. There is an endpoint that returns user data in a proprietary format which contains complete information about each data point. There are also other endpoints that produces data in standard formats such as for example the OIDC user-info format.
 
 _Notes:_
 
@@ -202,10 +201,10 @@ The service is not supposed to persist any user data that is retreived from the 
 
 _Links:_
 
-- https://www.rfc-editor.org/rfc/rfc6749#section-6
-- https://www.rfc-editor.org/rfc/rfc6749#section-7
-- https://oauth.net/2/grant-types/refresh-token/
-- https://www.oauth.com/oauth2-servers/access-tokens/refreshing-access-tokens/
+- [RFC-6749 - Refreshing an Access Token](https://www.rfc-editor.org/rfc/rfc6749#section-6)
+- [RFC-6749 - Accessing Protected Resources](https://www.rfc-editor.org/rfc/rfc6749#section-7)
+- [Refresh Token on oauth.net](https://oauth.net/2/grant-types/refresh-token/)
+- [Refreshing Access Tokens on oauth.net](https://www.oauth.com/oauth2-servers/access-tokens/refreshing-access-tokens/)
 - TBD: link to RFC for userinfo endpoint
 - TBD: link to TruID API documentation for refresh
 - TBD: link to TruID API documentation for user-info
