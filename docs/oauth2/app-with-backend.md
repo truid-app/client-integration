@@ -4,18 +4,16 @@
 
 The goal of this integration flow is to give a service backend access to user data from TruID. The user is interacting with the service using an app.
 
-This flow uses the OAuth2 Authorization Code Grant to allow the user to authorize the backend to access the TruID API to fetch data about the user.
-
-_Notes:_
-
-TruID is currently not using the [PKCE extension](https://oauth.net/2/pkce/) to the OAuth2 Authorization Code Grant. This will however be required at some point in the future.
+This flow uses the OAuth2 Authorization Code Grant with the PKCE extension to allow the user to authorize the backend to access the TruID API to fetch data about the user.
 
 Documentation about different TruID flows:
 - TBD: Link to documentation about confirm-signup, single transaction, login, ...
 
 Standards:
 - [RFC 6749 - Authorization Code Grant](https://www.rfc-editor.org/rfc/rfc6749#section-4.1)
+- [RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients (PKCE)](https://www.rfc-editor.org/rfc/rfc7636)
 - [OAuth2 on oauth.net](https://oauth.net/2/)
+- [PKCE extension on oauth.net](https://oauth.net/2/pkce/)
 - [Authorization Code Grant on oauth.net](https://oauth.net/2/grant-types/authorization-code/)
 
 ## Flow
@@ -32,11 +30,11 @@ sequenceDiagram
 
   APP ->> BE: C-1: https://example.com/confirm-signup
 
-  BE -->> APP: C-2: 200 OK
+  BE -->> APP: C-2: 302 Found
   note over APP,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
 
   APP ->> TID: O-3: https://api.truid.app/oauth2/v1/authorize/confirm-signup
-  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/complete-signup<br/>state=ABC
+  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/complete-signup<br/>state=ABC<br/>code_challenge=CH1234<br/>code_challenge_method=S256
 
   TID ->> TID: Secure Identity
 
@@ -47,7 +45,7 @@ sequenceDiagram
   note over APP,BE: code=XYZ<br/>state=ABC
 
   BE ->> API: O-6: https://api.truid.app/oauth2/v1/token
-  note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/complete-signup<br/>client_id=123<br/>client_secret=ABC
+  note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/complete-signup<br/>client_id=123<br/>client_secret=ABC<br/>code_verifier=VR1234
 
   API -->> BE: O-7: 200 OK
   note over API,BE: access_token=ACCESS-ABCDEF<br/>token_type=bearer<br/>expires_in=3600<br/>refresh_token=REFRESH-ABCDEF<br/>scope=veritru.me/claim/email/v1
@@ -127,16 +125,19 @@ The `scope` parameter must be a subset of the claims that were given when config
 
 The `state` parameter must be used to prevent cross-site request forgery, see [RFC-6749 Section 10.12](https://www.rfc-editor.org/rfc/rfc6749#section-10.12).
 
+The PKCE extension must be used, see [RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients (PKCE)](https://www.rfc-editor.org/rfc/rfc7636). The only supported code challenge method is `S256`.
+
 Some clients, such as `react-native` based apps, have problems with manual handling of redirection responses, and in those cases it might make sense to return the authorization URL in a 2xx response. See TBD: link to example code
 
 _Example:_
 
-`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https%3A%2F%2Fexample.com%2Fcomplete-signup&state=123456`
+`https://api.truid.app/oauth2/v1/authorization/confirm-signup?response_type=code&client_id=abcdef&scope=veritru.me%2Fclaim%2Femail%2Fv1&redirect_uri=https%3A%2F%2Fexample.com%2Fcomplete-signup&state=123456&code_challenge=CH12345&code_challenge_method=S256`
 
 _Links:_
 
 - [RFC-6749 - Authorization Request](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.1)
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
+- [RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients (PKCE)](https://www.rfc-editor.org/rfc/rfc7636)
 - TBD: Link to TruID API specification
 - [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruIDSignupFlow.kt#L32-L32)
 
