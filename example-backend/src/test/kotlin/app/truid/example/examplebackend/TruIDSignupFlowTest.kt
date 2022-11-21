@@ -22,7 +22,7 @@ fun URIBuilder.getParam(name: String) = this.queryParams.firstOrNull { it.name =
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ActiveProfiles("test")
-class TruIDSignupFlowIT {
+class TruIDSignupFlowTest {
 
     @Autowired
     lateinit var rest: TestRestTemplate
@@ -69,6 +69,21 @@ class TruIDSignupFlowIT {
 
         val url = URIBuilder(res.location())
         assertNotNull(url.getParam("state"))
+    }
+
+    @Test
+    fun `It should use PKCE with S256`() {
+        val res = rest.exchange(
+            get("/truid/v1/confirm-signup")
+                .build(),
+            Void::class.java,
+        )
+        assertEquals(302, res.statusCodeValue)
+
+        val url = URIBuilder(res.location())
+        assertNotNull(url.getParam("code_challenge"))
+        assertEquals(43, url.getParam("code_challenge")?.length)
+        assertEquals("S256", url.getParam("code_challenge_method"))
     }
 
     @Test
