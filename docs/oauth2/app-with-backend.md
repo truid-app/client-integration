@@ -139,7 +139,7 @@ _Links:_
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - [RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients (PKCE)](https://www.rfc-editor.org/rfc/rfc7636)
 - TBD: Link to TruID API specification
-- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruIDSignupFlow.kt#L32-L32)
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruIDSignupFlow.kt#L67-L67)
 
 ### 3. Fetch authorization URL and rediect to TruID
 
@@ -182,13 +182,39 @@ The service must verify that the `state` parameter is correct and matches the lo
 
 If the user cancels the authorization request, or if there is any other error during the authorization flow, the redirect will contain an `error` parameter that identifies the error. The service should return a 403 response from this endpoint in that case.
 
+The backend must include the PKCE code verifier in the request to get an access token.
+
+The `redirect_uri` paramteter in the token request must match exactly what is configured in TruID.
+
+_Examples:_
+
+Example authorization response:
+
+```
+GET https://example.com/complete-signup?code=XYZ&state=123
+```
+
+Example token request:
+
+```
+POST https://api.truid.app/oauth2/v1/token
+
+grant_type=authorization_code
+code=XYZ
+redirect_uri=https://example.com/complete-signup
+client_id=123
+client_secret=ABC
+code_verifier=VR1234
+```
+
 _Links:_
 
+- [RFC-6749 - Authorization Response](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2)
 - [RFC-6749 - Access Token Request](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3)
 - [Authorization Code Request on oauth.net](https://www.oauth.com/oauth2-servers/access-tokens/authorization-code-request/)
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
-- TBD: link to TruID API documentation
-- TBD: link to code example
+- TBD: link to TruID API documentation for token endpoint
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruIDSignupFlow.kt#L92-L92)
 
 ### 6. Access the TruID User Info endpoint
 
