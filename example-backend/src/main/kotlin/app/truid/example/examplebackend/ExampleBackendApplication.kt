@@ -3,6 +3,7 @@ package app.truid.example.examplebackend
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
+import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.server.session.CookieWebSessionIdResolver
 import org.springframework.web.server.session.WebSessionIdResolver
 
@@ -16,6 +17,11 @@ class ExampleBackendApplication {
                 it.sameSite("Lax")
             }
         }
+    }
+
+    @Bean
+    fun webClient(): WebClient {
+        return WebClient.create()
     }
 }
 

@@ -48,3 +48,54 @@ paths:
               description: URL to redirect to for TruID Signup flow
               schema:
                 type: string
+  '/complete-signup':
+    get:
+      description: |
+        Complete the signup flow.
+        This is the endpoint that receives the OAuth2 authorization response.
+        See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
+      parameters:
+        - name: code
+          description: |
+            Code delivered in the authoization response.
+            See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
+          in: query
+          schema:
+            type: string
+        - name: state
+          description: |
+            State parameter from the authorization request.
+            See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
+          in: query
+          schema:
+            type: string
+        - name: error
+          description: |
+            Set to indicate an error in the authorization flow.
+            See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2.1
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            The signup flow was successful
+        '403':
+          description: |
+            The signup flow failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteSignupError'
+
+components:
+  schemas:
+    CompleteSignupError:
+      type: object
+      properties:
+        error:
+          type: string
+          enum: [invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorized_client, unsupported_grant_type]
+          description: |
+            See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2.1
+      required: [ error ]
