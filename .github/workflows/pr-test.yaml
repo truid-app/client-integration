@@ -1,0 +1,29 @@
+name: PR Test
+
+on:
+  pull_request:
+    branches: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          architecture: x64
+          cache: maven
+
+      - name: Verify
+        working-directory: example-backend
+        run: |
+          ./mvnw --batch-mode verify
