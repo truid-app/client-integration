@@ -5,10 +5,21 @@ import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders.LOCATION
 import org.springframework.http.HttpStatus.ACCEPTED
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.FOUND
+import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.reactive.function.BodyInserters.fromFormData
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebSession
 import java.security.MessageDigest
@@ -31,16 +42,26 @@ private fun random(n: Int): ByteArray {
     return result
 }
 
+class Forbidden(val error: String, message: String?): RuntimeException(message)
+
 @RestController
 class TruIDSignupFlow(
     @Value("\${oauth2.clientId}")
     val clientId: String,
 
-    @Value("\${oauth2.truid.domain}")
-    val truidDomain: String,
+    @Value("\${oauth2.clientSecret}")
+    val clientSecret: String,
+
+    @Value("\${oauth2.truid.signup-endpoint}")
+    val truidSignupEndpoint: String,
+
+    @Value("\${oauth2.truid.token-endpoint}")
+    val truidTokenEndpoint: String,
 
     @Value("\${app.domain}")
     val publicDomain: String,
+
+    val webClient: WebClient,
 ) {
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
@@ -49,13 +70,13 @@ class TruIDSignupFlow(
     ) {
         val session = exchange.session.awaitSingle()
 
-        val truidSignupUrl = URIBuilder("$truidDomain/oauth2/v1/authorization/confirm-signup")
+        val truidSignupUrl = URIBuilder(truidSignupEndpoint)
             .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
             .addParameter("scope", "veritru.me/claim/email/v1")
             .addParameter("redirect_uri", "$publicDomain/truid/v1/complete-signup")
-            .addParameter("state", getOauth2State(session))
-            .addParameter("code_challenge", getOauth2CodeChallenge(session))
+            .addParameter("state", createOauth2State(session))
+            .addParameter("code_challenge", createOauth2CodeChallenge(session))
             .addParameter("code_challenge_method", "S256")
             .build()
 
@@ -67,24 +88,78 @@ class TruIDSignupFlow(
         }
     }
 
-    private fun getOauth2State(session: WebSession): String {
-        return session.attributes.computeIfAbsent("oauth2-state") {
+    @GetMapping("/truid/v1/complete-signup")
+    suspend fun completeSignup(
+        @RequestParam("code") code: String?,
+        @RequestParam("state") state: String?,
+        @RequestParam("error") error: String?,
+        exchange: ServerWebExchange,
+    ) {
+        val session = exchange.session.awaitSingle()
+
+        if (error != null) {
+            throw Forbidden(error, "There was an authorization error")
+        } else if (!verifyOauth2State(session, state)) {
+            throw Forbidden("access_denied", "State does not match the expected value")
+        } else {
+            try {
+                val body = LinkedMultiValueMap<String, String>()
+                body.add("grant_type", "authorization_code")
+                body.add("code", code)
+                body.add("redirect_uri", "$publicDomain/truid/v1/complete-signup")
+                body.add("client_id", clientId)
+                body.add("client_secret", clientSecret)
+                body.add("code_verifier", getOauth2CodeVerifier(session))
+
+                val tokenResponse = webClient.post()
+                    .uri(URIBuilder(truidTokenEndpoint).build())
+                    .contentType(APPLICATION_FORM_URLENCODED)
+                    .accept(APPLICATION_JSON)
+                    .body(fromFormData(body))
+                    .retrieve()
+                    .awaitBody<Map<String, String>>()
+
+                // TODO: Store tokenResponse["refresh_token"]
+            } catch (e: WebClientResponseException.Forbidden) {
+                throw Forbidden("access_denied", e.message)
+            }
+        }
+    }
+
+    @ExceptionHandler(Forbidden::class)
+    @ResponseStatus(FORBIDDEN)
+    fun handleForbidden(e: Forbidden): Map<String, String> {
+        return mapOf(
+            "error" to e.error,
+        )
+    }
+
+    private fun createOauth2State(session: WebSession): String {
+        return session.attributes.compute("oauth2-state") { _, _ ->
             // Use state parameter to prevent CSRF,
             // according to https://www.rfc-editor.org/rfc/rfc6749#section-10.12
             base64url(random(20))
         } as String
     }
 
-    private fun getOauth2CodeVerifier(session: WebSession): String {
-        return session.attributes.computeIfAbsent("oauth2-code-verifier") {
-            // Create code verifier according to https://www.rfc-editor.org/rfc/rfc7636#section-4.1
-            base64url(random(32))
-        } as String
+    private fun verifyOauth2State(session: WebSession, state: String?): Boolean {
+        val savedState = session.attributes.remove("oauth2-state") as String?
+        return savedState != null && state != null && state == savedState
     }
 
-    private fun getOauth2CodeChallenge(session: WebSession): String {
-        // Create code challenge according to https://www.rfc-editor.org/rfc/rfc7636#section-4.2
-        val codeVerifier = getOauth2CodeVerifier(session)
+    private fun createOauth2CodeChallenge(session: WebSession): String {
+        val codeVerifier = session.attributes.compute("oauth2-code-verifier") { _, _ ->
+            // Create code verifier,
+            // according to https://www.rfc-editor.org/rfc/rfc7636#section-4.1
+            base64url(random(32))
+        } as String
+
+        // Create code challenge,
+        // according to https://www.rfc-editor.org/rfc/rfc7636#section-4.2
         return base64url(sha256(codeVerifier))
+    }
+
+    private fun getOauth2CodeVerifier(session: WebSession): String? {
+        return session.attributes["oauth2-code-verifier"] as String?
     }
 }
