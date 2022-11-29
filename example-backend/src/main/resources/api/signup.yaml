@@ -14,7 +14,7 @@ paths:
   '/confirm-signup':
     get:
       description: |
-        Create an URL to use towards the TruID API to start the Signup flow
+        Create an URL to use towards the Truid API to start the Signup flow
       parameters:
         - name: X-Requested-With
           description: |
@@ -29,10 +29,10 @@ paths:
         '302':
           description: |
             Returning an URL that the client should redirect to in order to
-            start a TruID Signup flow
+            start a Truid Signup flow
           headers:
             Location:
-              description: URL to redirect to for TruID Signup flow
+              description: URL to redirect to for Truid Signup flow
               schema:
                 type: string
         '202':
@@ -45,7 +45,7 @@ paths:
             A 202 response is to be treated exactly as a 302 response.
           headers:
             Location:
-              description: URL to redirect to for TruID Signup flow
+              description: URL to redirect to for Truid Signup flow
               schema:
                 type: string
   '/complete-signup':
