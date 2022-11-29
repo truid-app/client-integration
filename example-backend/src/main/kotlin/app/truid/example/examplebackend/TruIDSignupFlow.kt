@@ -45,7 +45,7 @@ private fun random(n: Int): ByteArray {
 class Forbidden(val error: String, message: String?): RuntimeException(message)
 
 @RestController
-class TruIDSignupFlow(
+class TruidSignupFlow(
     @Value("\${oauth2.clientId}")
     val clientId: String,
 
