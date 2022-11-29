@@ -1,4 +1,4 @@
-# TruID Developer
+# Truid Developer
 
 ## Documentation
 

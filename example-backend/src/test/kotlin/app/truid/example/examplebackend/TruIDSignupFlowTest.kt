@@ -38,7 +38,7 @@ fun ResponseDefinitionBuilder.withJsonBody(body: Any): ResponseDefinitionBuilder
 @AutoConfigureWireMock(port = 0)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ActiveProfiles("test")
-class TruIDSignupFlowTest {
+class TruidSignupFlowTest {
 
     @Autowired
     lateinit var rest: TestRestTemplate
@@ -46,7 +46,7 @@ class TruIDSignupFlowTest {
     @Nested
     inner class ConfirmSignupEndpoint {
         @Test
-        fun `It should redirect to TruID authorization endpoint`() {
+        fun `It should redirect to Truid authorization endpoint`() {
             val res = rest.exchange(
                 get("/truid/v1/confirm-signup")
                     .build(),
