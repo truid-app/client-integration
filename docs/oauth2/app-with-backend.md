@@ -143,11 +143,11 @@ _Links:_
 
 ### 3. Fetch authorization URL and rediect to Truid
 
-Start the Authorization Flow from the app, by sending a request to the endpoint created in step 2 and fetch the Authorization Request URL. The app should open this URL, which should trigger the Truid App to be opened. This corresponds to step _O-3_ in the flow above.
+Start the Authorization Flow from the app, by sending a request to the endpoint created in step 2 and fetch the Authorization Request URL. The app should open this URL, which should trigger the Truid App to be opened. This corresponds to steps _C-1_, _C-2_, and _O-3_ in the flow above.
 
 _Links:_
 
-- TBD: Link to code example
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-app/App.tsx#L51)
 
 ### 4. Add Deep Linking for redirect URI
 
