@@ -111,7 +111,7 @@ Add an endpoint in the backend which has the purpose of creating an Authorizatio
 
 The Authorization Request URL follows the OAuth2 standard for an Authorization Request. The URL will point to different endpoints in the Truid API depending on which Truid Authorization Flow that should be started.
 
-To start a Truid Confirm Signup flow, the Authorization Request URL should point to `https://api.truid.app/oauth2/v1/authorization/confim-signup`.
+To start a Truid Confirm Signup flow, the Authorization Request URL should point to `https://api.truid.app/oauth2/v1/authorize/confirm-signup`.
 
 TBD: Link to Truid API specification for authorization URL
 
