@@ -1,8 +1,8 @@
-# Client App with Backend
+# Client webapp with Backend
 
 ## Overview
 
-The goal of this integration flow is to give a service backend access to user data from Truid. The user is interacting with the service using an app.
+The goal of this integration flow is to give a service backend access to user data from Truid. The user is interacting with the service using a webapp.
 
 This flow uses the OAuth2 Authorization Code Grant with the PKCE extension to allow the user to authorize the backend to access the Truid API to fetch data about the user.
 
@@ -23,26 +23,27 @@ This sequence diagram gives an overview of the flow.
 ```mermaid
 sequenceDiagram
 
-  participant APP as App
+  participant WEB as Browser
   participant TID as Truid App
   participant BE as Backend
   participant API as Truid REST API
 
-  APP ->> BE: C-1: https://example.com/confirm-signup
+  WEB ->> BE: C-1: https://example.com/confirm-signup
 
-  BE -->> APP: C-2: 302 Found
-  note over APP,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+  BE -->> WEB: C-2: 302 Found
+  note over WEB,BE: Location: https://api.truid.app/oauth2/v1/authorize/confirm-signup
 
-  APP ->> TID: O-3: https://api.truid.app/oauth2/v1/authorize/confirm-signup
-  note over APP,TID: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/complete-signup<br/>state=ABC<br/>code_challenge=CH1234<br/>code_challenge_method=S256
+  WEB ->> API: O-3: https://api.truid.app/oauth2/v1/authorize/confirm-signup
+  note over WEB,API: response_type=code<br/>client_id=123<br/>scope=veritru.me/claim/email/v1<br/>redirect_uri=https://example.com/complete-signup<br/>state=ABC<br/>code_challenge=CH1234<br/>code_challenge_method=S256
+
+  API -->> WEB: T-4: 200 OK (QR code page)
+
+  WEB ->> TID: Scan QR code
 
   TID ->> TID: Secure Identity
 
-  TID ->> APP: O-4: https://example.com/complete-signup
-  note over TID,APP: code=XYZ<br/>state=ABC
-
-  APP ->> BE: C-5: https://example.com/complete-signup
-  note over APP,BE: code=XYZ<br/>state=ABC
+  WEB ->> BE: O-5: https://example.com/complete-signup
+  note over WEB,BE: code=XYZ<br/>state=ABC
 
   BE ->> API: O-6: https://api.truid.app/oauth2/v1/token
   note over BE,API: grant_type=authorization_code<br/>code=XYZ<br/>redirect_uri=https://example.com/complete-signup<br/>client_id=123<br/>client_secret=ABC<br/>code_verifier=VR1234
@@ -50,7 +51,7 @@ sequenceDiagram
   API -->> BE: O-7: 200 OK
   note over API,BE: access_token=ACCESS-ABCDEF<br/>token_type=bearer<br/>expires_in=3600<br/>refresh_token=REFRESH-ABCDEF<br/>scope=veritru.me/claim/email/v1
 
-  BE -->> APP: C-8: 200 OK
+  BE -->> WEB: C-8: 200 OK
 
   BE ->> API: O-9: https://api.truid.app/oidc/v1/user-info
   note over BE,API: Bearer: ACCESS-ABCDEF
@@ -63,23 +64,25 @@ sequenceDiagram
 
 &nbsp; &nbsp; *O-N* denotes OAuth2 standard messages
 
+&nbsp; &nbsp; *T-N* denotes Truid specific messages
+
 #### Steps
 
-&nbsp; &nbsp; *C-1:* The app is initiating the flow by asking the backend for an URL to use for starting the flow towards Truid.
+&nbsp; &nbsp; *C-1:* The webapp is initiating the flow by asking the backend for an URL to use for starting the flow towards Truid
 
 &nbsp; &nbsp; *C-2:* Return authorization URL
 
-&nbsp; &nbsp; *O-3:* The app is requesting access from Truid. This request is opening the Truid App which is used for authenticating the user.
+&nbsp; &nbsp; *O-3:* The browser is redirected to a Truid authorization page
 
-&nbsp; &nbsp; *O-4:* The Truid App is redirecting back to the app with a code that can be used to get an access token
+&nbsp; &nbsp; *T-4:* The Truid API returns a page containing a QR code for authentication
 
-&nbsp; &nbsp; *C-5:* The app is completing the flow by sending the code to the backend
+&nbsp; &nbsp; *O-5:* After completing authorization in the Truid App, the browser is redirected back to the service
 
 &nbsp; &nbsp; *O-6:* The backend is using the code to get an access token from Truid
 
 &nbsp; &nbsp; *O-7:* The Truid API is returning an access token
 
-&nbsp; &nbsp; *C-8:* The backend is returning a response to the app, confirming that the flow is complete
+&nbsp; &nbsp; *C-8:* The backend is returning a response
 
 &nbsp; &nbsp; *O-9:* The backend uses the access token to fetch data from the Truid API
 
@@ -141,32 +144,21 @@ _Links:_
 - TBD: Link to Truid API specification
 - [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L67-L67)
 
-### 3. Fetch authorization URL and rediect to Truid
+### 3. Open authorization URL
 
-Start the Authorization Flow from the app, by sending a request to the endpoint created in step 2 and fetch the Authorization Request URL. The app should open this URL, which should trigger the Truid App to be opened. This corresponds to steps _C-1_, _C-2_, and _O-3_ in the flow above.
+Start the Authorization Flow from the webapp, by directing the browser to the endpoint created in step 2 and then to be redirected to the Authorization Request URL. This corresponds to steps _C-1_, _C-2_, and _O-3_ in the flow above.
 
-_Links:_
+_Notes:_
 
-- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-app/App.tsx#L51)
-
-### 4. Add Deep Linking for redirect URI
-
-Once the Truid App has authenticated the user and the user has given consent to share data with the service, the Truid App will redirect back to the app using the redirect URI. This is the URI given in the `redirect_uri` parameter in the Authorization Request created in step 2, and must match exactly the redirect URI that is configured in step 1. This corresponds to step _O-4_ in the flow above.
-
-This URI must be a `https` URL, and the app must be associated with the domain. On Android the URL should work as an [Android App Link](https://developer.android.com/training/app-links) to open the app, and on iOS it should works as an [Universal Link](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content) to open the app.
-
-When the app is opened by the redirect URI deep link, it should send a request to the backend endpoint, described in step 5, to complete the authorization process. This corresponds to step _C-5_ in the flow above. It must pass on all parameters from the received redirect URI. This URI will contain a number of parameters, for example an authorization code that the backend should use to request an access token from the Truid API.
+The authorization URL can be opened in a new window to keep the webapp while doing the authorization.
 
 _Links:_
 
-- [RFC-6749 - Authorization Response](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2)
-- [Android - App Links](https://developer.android.com/training/app-links)
-- [iOS - Universal Links](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content)
-- TBD: link to example code
+- TBD code example
 
-### 5. Add endpoint for completing authorization
+### 4. Add endpoint for completing authorization
 
-Add an endpoint for completing the authorization. This corresponds to step _C-5_ in the flow above.
+Add an endpoint for completing the authorization. This corresponds to step _O-5_ in the flow above, and is the redirect URI that the browser will be directed to at the end of the authorization flow.
 
 The service should invoke the Truid API token endpoint to complete the authorization flow, and to exchange the code into an access token and a refresh token. This corresponds to step _O-6_ and _O-7_ in the flow above.
 
@@ -216,7 +208,7 @@ _Links:_
 - TBD: link to Truid API documentation for token endpoint
 - [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L92-L92)
 
-### 6. Access the Truid User Info endpoint
+### 5. Access the Truid User Info endpoint
 
 When the service want to use user data from Truid it should use the stored refresh token to get a new access token, and then use the access token to fetch the user data from the Truid API. This corresponds to the steps _O-9_ and _O-10_ in the flow above.
 
