@@ -154,7 +154,7 @@ The authorization URL can be opened in a new window to keep the webapp while doi
 
 _Links:_
 
-- TBD code example
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-web/src/html/index.html#L7-L7)
 
 ### 4. Add endpoint for completing authorization
 
