@@ -1,0 +1,12 @@
+{
+  "name": "example-web",
+  "version": "0.0.1",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "mkir -p dist && cp -R src/html/* dist/"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}

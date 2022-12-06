@@ -7,6 +7,8 @@ import org.springframework.http.HttpHeaders.LOCATION
 import org.springframework.http.HttpStatus.ACCEPTED
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.FOUND
+import org.springframework.http.HttpStatus.OK
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.util.LinkedMultiValueMap
@@ -14,7 +16,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.BodyInserters.fromFormData
 import org.springframework.web.reactive.function.client.WebClient
@@ -22,6 +23,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebSession
+import java.net.URI
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -61,6 +63,12 @@ class TruidSignupFlow(
     @Value("\${app.domain}")
     val publicDomain: String,
 
+    @Value("\${web.success}")
+    val webSuccess: URI,
+
+    @Value("\${web.failure}")
+    val webFailure: URI,
+
     val webClient: WebClient,
 ) {
     @GetMapping("/truid/v1/confirm-signup")
@@ -94,7 +102,7 @@ class TruidSignupFlow(
         @RequestParam("state") state: String?,
         @RequestParam("error") error: String?,
         exchange: ServerWebExchange,
-    ) {
+    ): Void? {
         val session = exchange.session.awaitSingle()
 
         if (error != null) {
@@ -124,14 +132,39 @@ class TruidSignupFlow(
                 throw Forbidden("access_denied", e.message)
             }
         }
+
+        if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
+            // Redirect to success page in the webapp flow
+            exchange.response.headers.location = webSuccess
+            exchange.response.statusCode = FOUND
+            return null
+        } else {
+            // Return a 200 response in case of an AJAX request
+            exchange.response.statusCode = OK
+            return null
+        }
     }
 
     @ExceptionHandler(Forbidden::class)
-    @ResponseStatus(FORBIDDEN)
-    fun handleForbidden(e: Forbidden): Map<String, String> {
-        return mapOf(
-            "error" to e.error,
-        )
+    fun handleForbidden(
+        e: Forbidden,
+        exchange: ServerWebExchange,
+    ): Map<String, String>? {
+        if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
+            // Redirect to error page in the webapp flow
+            exchange.response.headers.location =
+                URIBuilder(webFailure).addParameter("error", e.error).build()
+            exchange.response.statusCode = FOUND
+
+            return null
+        } else {
+            // Return a 403 response in case of an AJAX request
+            exchange.response.statusCode = FORBIDDEN
+
+            return mapOf(
+                "error" to e.error,
+            )
+        }
     }
 
     private fun createOauth2State(session: WebSession): String {

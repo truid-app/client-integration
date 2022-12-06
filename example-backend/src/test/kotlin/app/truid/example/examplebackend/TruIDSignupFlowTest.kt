@@ -21,6 +21,7 @@ import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpHeaders.CONTENT_TYPE
 import org.springframework.http.HttpHeaders.COOKIE
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.RequestEntity.get
 import org.springframework.http.ResponseEntity
@@ -174,7 +175,7 @@ class TruidSignupFlowTest {
         }
 
         @Test
-        fun `Complete signup`() {
+        fun `Complete signup should return 200`() {
             val res = rest.exchange(
                 get("/truid/v1/complete-signup?code=1234&state=${state}")
                     .header(COOKIE, cookie.toString())
@@ -193,6 +194,7 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res.statusCodeValue)
+            assertEquals("access_denied", res.body?.get("error"))
         }
 
         @Test
@@ -204,6 +206,7 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res.statusCodeValue)
+            assertEquals("access_denied", res.body?.get("error"))
         }
 
         @Test
@@ -215,6 +218,7 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res.statusCodeValue)
+            assertEquals("access_denied", res.body?.get("error"))
         }
 
         @Test
@@ -234,6 +238,7 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res2.statusCodeValue)
+            assertEquals("access_denied", res2.body?.get("error"))
         }
 
         @Test
@@ -244,6 +249,7 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res.statusCodeValue)
+            assertEquals("access_denied", res.body?.get("error"))
         }
 
         @Test
@@ -268,6 +274,148 @@ class TruidSignupFlowTest {
                 Map::class.java,
             )
             assertEquals(403, res.statusCodeValue)
+            assertEquals("access_denied", res.body?.get("error"))
+        }
+    }
+
+    @Nested
+    inner class CompleteSignupWebFlow {
+        private lateinit var state: String
+        private lateinit var cookie: HttpCookie
+
+        @BeforeEach
+        fun `setup authorization`() {
+            WireMock.stubFor(
+                post(urlEqualTo("/oauth2/v1/token")).willReturn(
+                    aResponse()
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withStatus(200)
+                        .withJsonBody(
+                            mapOf(
+                                "access_token" to "access-123",
+                                "token_type" to "bearer",
+                                "expires_in" to 300,
+                                "refresh_token" to "refresh-123",
+                                "scope" to "veritru.me/claim/email/v1",
+                            ),
+                        ),
+                )
+            )
+        }
+
+        @BeforeEach
+        fun `Start signup`() {
+            val res = rest.exchange(
+                get("/truid/v1/confirm-signup")
+                    .build(),
+                Void::class.java,
+            )
+            assertEquals(302, res.statusCodeValue)
+
+            cookie = HttpCookie.parse(res.setCookie()).single()
+            val url = URIBuilder(res.location())
+            state = url.getParam("state")!!
+        }
+
+        @Test
+        fun `Complete signup should return 302`() {
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?code=1234&state=${state}")
+                    .header(COOKIE, cookie.toString())
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/success.html", url.path)
+        }
+
+        @Test
+        fun `Should return 302 with error on error authorization response`() {
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?error=access_denied")
+                    .header(COOKIE, cookie.toString())
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/failure.html", url.path)
+            assertEquals("access_denied", url.getParam("error"))
+        }
+
+        @Test
+        fun `Should return 302 with error on mismatching state`() {
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?code=1234&state=wrong-state")
+                    .header(COOKIE, cookie.toString())
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/failure.html", url.path)
+            assertEquals("access_denied", url.getParam("error"))
+        }
+
+        @Test
+        fun `Should return 302 with error on null state`() {
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?code=1234")
+                    .header(COOKIE, cookie.toString())
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/failure.html", url.path)
+            assertEquals("access_denied", url.getParam("error"))
+        }
+
+        @Test
+        fun `Should return 302 with error on unauthorized requests`() {
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?code=1234&state=${state}")
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/failure.html", url.path)
+            assertEquals("access_denied", url.getParam("error"))
+        }
+
+        @Test
+        fun `Should return 302 with error if the token request fails`() {
+            WireMock.stubFor(
+                post(urlEqualTo("/oauth2/v1/token")).willReturn(
+                    aResponse()
+                        .withStatus(403)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withJsonBody(
+                            mapOf(
+                                "error" to "access_denied",
+                            ),
+                        ),
+                )
+            )
+
+            val res = rest.exchange(
+                get("/truid/v1/complete-signup?code=1234&state=${state}")
+                    .header(COOKIE, cookie.toString())
+                    .accept(MediaType.TEXT_HTML)
+                    .build(),
+                Void::class.java,
+            )
+            val url = URIBuilder(res.location())
+            assertEquals(302, res.statusCodeValue)
+            assertEquals("/web/failure.html", url.path)
+            assertEquals("access_denied", url.getParam("error"))
         }
     }
 }
