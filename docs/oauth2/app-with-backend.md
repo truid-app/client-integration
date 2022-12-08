@@ -139,7 +139,7 @@ _Links:_
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - [RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients (PKCE)](https://www.rfc-editor.org/rfc/rfc7636)
 - TBD: Link to Truid API specification
-- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L67-L67)
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L75)
 
 ### 3. Fetch authorization URL and rediect to Truid
 
@@ -214,7 +214,7 @@ _Links:_
 - [Authorization Code Request on oauth.net](https://www.oauth.com/oauth2-servers/access-tokens/authorization-code-request/)
 - [RFC-6749 - Cross-Site Request Forgery](https://www.rfc-editor.org/rfc/rfc6749#section-10.12)
 - TBD: link to Truid API documentation for token endpoint
-- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L92-L92)
+- [Code Example](https://github.com/truid-app/client-integration/blob/main/example-backend/src/main/kotlin/app/truid/example/examplebackend/TruidSignupFlow.kt#L100)
 
 ### 6. Access the Truid User Info endpoint
 
