@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  example-backend:
+    image: example-backend
+    build: ./example-backend
+    environment:
+      - TRUID_CLIENT_ID
+      - TRUID_CLIENT_SECRET
+      - EXAMPLE_DOMAIN
+  example-web:
+    image: example-web
+    build: ./example-web
+    ports:
+      - "8080:8080"
