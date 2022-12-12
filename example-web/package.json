@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "mkir -p dist && cp -R src/html/* dist/"
+    "build": "mkdir -p dist && cp -R src/html/* dist/"
   },
   "files": [
     "dist/**/*"
