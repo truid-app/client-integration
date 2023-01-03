@@ -32,7 +32,7 @@ _Note:_
 
 This example runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
 
-Currently the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
+Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
 
 ### Start the backend
 
@@ -54,4 +54,30 @@ Point your browser to `http://localhost:8080/index.html`.
 
 ### Start the app
 
+### Android 
+
+Prerequisites:
+Android Studio with emulator supporting Android API v28 or later and including Google Play Store
+
+
+`$ npm install -g yarn`
+
+Setup:
+
+```
+$ cd example-app
+$ yarn install
+```
+
+Start the emulator in Android Studio - Device manager
+
+Give emulator access to host localhost:8080 where example-backend is running
+
+`$ adb reverse 8080`
+
+Start the app
+
+`$ yarn run android`
+
+### Ios
 TBD
