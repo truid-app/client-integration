@@ -13,7 +13,6 @@ import {
   Button,
   ImageBackground,
   Linking,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
