@@ -81,7 +81,7 @@ class TruidSignupFlow(
         val truidSignupUrl = URIBuilder(truidSignupEndpoint)
             .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
-            .addParameter("scope", "veritru.me/claim/email/v1")
+            .addParameter("scope", "truid.app/data-point/email")
             .addParameter("redirect_uri", "$publicDomain/truid/v1/complete-signup")
             .addParameter("state", createOauth2State(session))
             .addParameter("code_challenge", createOauth2CodeChallenge(session))
