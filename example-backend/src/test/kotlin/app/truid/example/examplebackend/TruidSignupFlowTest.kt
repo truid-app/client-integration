@@ -58,7 +58,7 @@ class TruidSignupFlowTest {
             val url = URIBuilder(res.location())
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
-            assertEquals("/oauth2/v1/authorization/confirm-signup", url.path)
+            assertEquals("/oauth2/v1/authorize/confirm-signup", url.path)
             assertEquals("code", url.getParam("response_type"))
             assertEquals("test-client-id", url.getParam("client_id"))
             assertNotNull(url.getParam("scope"))
@@ -118,7 +118,7 @@ class TruidSignupFlowTest {
             val url = URIBuilder(res.location())
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
-            assertEquals("/oauth2/v1/authorization/confirm-signup", url.path)
+            assertEquals("/oauth2/v1/authorize/confirm-signup", url.path)
         }
 
         @Test
@@ -328,7 +328,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/success.html", url.path)
+            assertEquals("/success.html", url.path)
         }
 
         @Test
@@ -342,7 +342,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/failure.html", url.path)
+            assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -357,7 +357,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/failure.html", url.path)
+            assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -372,7 +372,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/failure.html", url.path)
+            assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -386,7 +386,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/failure.html", url.path)
+            assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -414,7 +414,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/web/failure.html", url.path)
+            assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
     }

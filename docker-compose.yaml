@@ -6,6 +6,7 @@ services:
     environment:
       - TRUID_CLIENT_ID
       - TRUID_CLIENT_SECRET
+      - TRUID_BASEPATH
       - EXAMPLE_DOMAIN
   example-web:
     image: example-web

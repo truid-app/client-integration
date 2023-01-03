@@ -13,9 +13,9 @@ import {
   Button,
   ImageBackground,
   Linking,
+  Platform,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   useColorScheme,
@@ -31,8 +31,7 @@ const Header = () => {
       source={require('react-native/Libraries/NewAppScreen/components/logo.png')}
       style={styles.background}
       imageStyle={styles.logo}>
-      <Text
-        style={styles.text}>
+      <Text style={styles.text}>
         Welcome to
         {'\n'}
         Truid Example App
@@ -49,7 +48,7 @@ const App = () => {
   };
 
   const confirmSignup = React.useCallback(() => {
-    Linking.openURL("https://example.truid.app/truid/v1/confirm-signup");
+    Linking.openURL('http://localhost:8080/truid/v1/confirm-signup');
   }, []);
 
   return (
