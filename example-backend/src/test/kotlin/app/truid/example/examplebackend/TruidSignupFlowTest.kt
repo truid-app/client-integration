@@ -153,7 +153,7 @@ class TruidSignupFlowTest {
                                 "token_type" to "bearer",
                                 "expires_in" to 300,
                                 "refresh_token" to "refresh-123",
-                                "scope" to "veritru.me/claim/email/v1",
+                                "scope" to "truid.app/data-point/email",
                             ),
                         ),
                 )
@@ -296,7 +296,7 @@ class TruidSignupFlowTest {
                                 "token_type" to "bearer",
                                 "expires_in" to 300,
                                 "refresh_token" to "refresh-123",
-                                "scope" to "veritru.me/claim/email/v1",
+                                "scope" to "truid.app/data-point/email",
                             ),
                         ),
                 )
