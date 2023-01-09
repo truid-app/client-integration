@@ -34,15 +34,20 @@ $ docker build . -t example-web
 
 This example can be run locally to test the flows.
 
-### Register a client
+### Register a Service
 
-Register an OAuth2 client in Truid, having the following properties:
-- Test Client: `true`
-- `redirect_uri`: `http://localhost:8080/truid/v1/complete-signup`
+Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
+- Test Service: `true`
+
+The Consent Template need the following property:
+- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup, truidtest://complete-signup` 
 
 _Note:_
 
-This example runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
+One of the redirect uris runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
+
+The other redirect, `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client. 
+Only clients `https` scheme is allowed for app to app integrations outside test clients.
 
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
 
@@ -53,6 +58,13 @@ Prerequisites:
 - Docker
 
 Start the backend:
+
+
+If you are testing the app to app flow, set the redirect uri to the one used by the example app:
+```
+$ export TRUID_REDIRECT_URI=truidtest://complete-signup
+```
+If you are testing the web client the redirect uri need to be `http://localhost:8080/truid/v1/complete-signup` which is the default
 
 ```
 $ export TRUID_CLIENT_ID=...
@@ -101,6 +113,11 @@ Setup:
 ```
 $ cd example-app
 $ yarn install
+```
+
+Change the redirect uri to the one used by the example app
+```
+$ export TRUID_REDIRECT_URI=truidtest://complete-signup
 ```
 
 Start the emulator in Android Studio - Device manager
