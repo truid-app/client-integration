@@ -40,6 +40,41 @@ const Header = () => {
 };
 
 const App = () => {
+  const [result, setResult] = React.useState<{
+    result: boolean | null;
+    errorReason: string | null;
+  }>({result: null, errorReason: null});
+
+  React.useEffect(() => {
+    let linking = new DeepLinking();
+    linking.addEventListener('url', async event => {
+      setResult(parseUrl(event.url));
+    });
+    async function getDeepLink() {
+      const url = await linking.getInitialUrl();
+      let res = parseUrl(url);
+      setResult(res);
+    }
+    getDeepLink();
+  }, []);
+
+  const parseUrl = (
+    url: string | undefined,
+  ): {result: boolean | null; errorReason: string | null} => {
+    if (!url) {
+      return {result: null, errorReason: null};
+    } else if (url.indexOf('error') > -1) {
+      let match = url.match('(?<=error\\=)(.*?)(?=\\&)');
+      let errorReason: string | null = null;
+      if (match && match.length > 0) {
+        errorReason = match[0];
+      }
+      return {result: false, errorReason: errorReason};
+    } else {
+      return {result: true, errorReason: null};
+    }
+  };
+
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
@@ -65,6 +100,13 @@ const App = () => {
         <View style={backgroundStyle}>
           <Button title="Perform action" disabled={true} />
         </View>
+        {result.result != null && (
+          <View>
+            <Text>
+              {result.result ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -90,5 +132,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+class DeepLinking {
+  async getInitialUrl(): Promise<string | undefined> {
+    const initialUrl = await Linking.getInitialURL();
+    return initialUrl ?? undefined;
+  }
+
+  addEventListener(type: 'url', handler: (event: {url: string}) => void): void {
+    Linking.addEventListener(type, event => {
+      handler(event);
+    });
+  }
+}
 
 export default App;
