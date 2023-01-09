@@ -47,7 +47,7 @@ _Note:_
 One of the redirect uris runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
 
 The other redirect, `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client. 
-Only clients `https` scheme is allowed for app to app integrations outside test clients.
+Only `https` scheme is allowed for app to app integrations outside test.
 
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
 
