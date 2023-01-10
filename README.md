@@ -32,9 +32,13 @@ $ docker build . -t example-web
 
 ## Try it
 
-This example can be run locally to test the flows.
+There are two main flows with slightly different setup
+1. Web Client Flow: The flow starts in the browser, either on the same device where Truid is installed or a browser on a second device
+2. App to App Flow: The flow starts in an app that uses Truid for login
 
-### Register a Service
+### Try the Web Client Flow
+
+#### Register a Service
 
 Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
 - Test Service: `true`
@@ -42,19 +46,13 @@ Register a Service and a Consent Template in Truid to obtain OAuth2 client crede
 For web client the Consent Template need the following property:
 - `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`
 
-The Consent Template need the following property:
-- `redirect_uris`: truidtest://complete-signup` 
-
 _Note:_
 
 One of the redirect uris runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
 
-The other redirect, `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client. 
-Only `https` scheme is allowed for app to app integrations outside test.
-
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
 
-### Start the backend
+#### Start the backend
 
 Prerequisites:
 - Client ID and Secret
@@ -62,20 +60,13 @@ Prerequisites:
 
 Start the backend:
 
-
-If you are testing the app to app flow, set the redirect uri to the one used by the example app:
-```bash
-$ export TRUID_REDIRECT_URI=truidtest://complete-signup
-```
-If you are testing the web client the redirect uri need to be `http://localhost:8080/truid/v1/complete-signup` which is the default
-
 ```bash
 $ export TRUID_CLIENT_ID=...
 $ export TRUID_CLIENT_SECRET=...
 $ docker-compose up
 ```
 
-### Try the web client
+#### Try the web client
 
 Point your browser to `http://localhost:8080/index.html`.
 
@@ -83,7 +74,7 @@ _Note:_
 
 The QR flow for remote login is not yet fully implemented, and will return access denied.
 
-### Try the web client on an Android phone
+#### Try the web client on an Android phone
 
 Connect the Android phone using USB
 
@@ -95,21 +86,53 @@ $ adb reverse tcp:8080 tcp:8080
 
 On the phone, point the browser to `http://localhost:8080/index.html`
 
-### Try the web client on an iPhone
+#### Try the web client on an iPhone
 
 Connect the iPhone using USB
 
 On the phone, point the browser to `http://localhost:8080/index.html`
 
-### Start the app
+### Try the App to App Flow
 
-### Android 
+#### Register a Service
+
+Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
+- Test Service: `true`
+
+The Consent Template need the following property:
+- `redirect_uris`: truidtest://complete-signup`
+
+_Note:_
+
+The other redirect, `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client.
+Only `https` scheme is allowed for app to app integrations outside test.
+
+Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
+
+#### Start the backend
+
+Prerequisites:
+- Client ID and Secret
+- Docker
+
+Start the backend:
+
+```bash
+$ export TRUID_REDIRECT_URI=truidtest://complete-signup
+$ export TRUID_CLIENT_ID=...
+$ export TRUID_CLIENT_SECRET=...
+$ docker-compose up
+```
+
+### Android
 
 Prerequisites:
 Android Studio with emulator supporting Android API v28 or later and including Google Play Store
 
-
-`$ npm install -g yarn`
+Install Yarn  
+```bash
+$ npm install -g yarn
+```
 
 Setup:
 
@@ -131,7 +154,7 @@ Give emulator access to host localhost:8080 where example-backend is running
 $ adb reverse tcp:8080 tcp:8080
 ```
 
-Start the app
+Start the example app
 
 ```bash
 $ yarn run android
