@@ -105,9 +105,9 @@ $ cd example-app
 $ yarn install
 ```
 
-Start the emulator in Android Studio - Device manager
+Start the emulator in Android Studio - Device manager or connect your phone with USB
 
-Give emulator access to host localhost:8080 where example-backend is running
+Give emulator/phone access to host localhost:8080 where example-backend is running
 
 ```bash
 $ adb reverse tcp:8080 tcp:8080
