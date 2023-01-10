@@ -76,7 +76,7 @@ The QR flow for remote login is not yet fully implemented, and will return acces
 
 #### Try the web client on an Android phone
 
-Connect the Android phone using USB
+Connect the Android phone using USB, developer mode need to be activated on the phone
 
 Forward the 8080 port to localhost:
 
@@ -100,11 +100,11 @@ Register a Service and a Consent Template in Truid to obtain OAuth2 client crede
 - Test Service: `true`
 
 The Consent Template need the following property:
-- `redirect_uris`: truidtest://complete-signup`
+- `redirect_uris`: `truidtest://complete-signup`
 
 _Note:_
 
-The other redirect, `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client.
+The redirect `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client.
 Only `https` scheme is allowed for app to app integrations outside test.
 
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
