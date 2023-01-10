@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
-
+import URL from 'url-parse';
 const Header = () => {
   return (
     <ImageBackground
@@ -66,9 +66,8 @@ const App = () => {
       return {success: undefined, errorReason: undefined};
     }
 
-    let deeplinkUrl = new URL(url);
-
-    let error = deeplinkUrl.searchParams.get('error');
+    let deeplinkUrl = new URL(url, true);
+    let error = deeplinkUrl.query.error;
     if (error) {
       return {success: false, errorReason: error!};
     }
