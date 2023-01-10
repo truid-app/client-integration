@@ -100,11 +100,11 @@ Register a Service and a Consent Template in Truid to obtain OAuth2 client crede
 - Test Service: `true`
 
 The Consent Template need the following property:
-- `redirect_uris`: `truidtest://complete-signup`
+- `redirect_uris`: `truidtest://truid/v1/complete-signup`
 
 _Note:_
 
-The redirect `truidtest://complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client.
+The redirect `truidtest://truid/v1/complete-signup` is used for app to app flow. It uses a custom scheme `truidtest` that only works on a test client.
 Only `https` scheme is allowed for app to app integrations outside test.
 
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
@@ -118,7 +118,7 @@ Prerequisites:
 Start the backend:
 
 ```bash
-$ export TRUID_REDIRECT_URI=truidtest://complete-signup
+$ export TRUID_REDIRECT_URI=truidtest://truid/v1/complete-signup
 $ export TRUID_CLIENT_ID=...
 $ export TRUID_CLIENT_SECRET=...
 $ docker-compose up
@@ -143,7 +143,7 @@ $ yarn install
 
 Change the redirect uri to the one used by the example app
 ```bash
-$ export TRUID_REDIRECT_URI=truidtest://complete-signup
+$ export TRUID_REDIRECT_URI=truidtest://truid/v1/complete-signup
 ```
 
 Start the emulator in Android Studio - Device manager

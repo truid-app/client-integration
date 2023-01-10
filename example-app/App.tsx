@@ -41,38 +41,39 @@ const Header = () => {
 
 const App = () => {
   const [result, setResult] = React.useState<{
-    result: boolean | null;
-    errorReason: string | null;
-  }>({result: null, errorReason: null});
+    success: boolean | undefined;
+    errorReason: string | undefined;
+  }>({success: undefined, errorReason: undefined});
 
   React.useEffect(() => {
-    let linking = new DeepLinking();
-    linking.addEventListener('url', async event => {
-      setResult(parseUrl(event.url));
+    Linking.addEventListener('url', event => {
+      setResult(handleDeepLink(event.url));
     });
+
     async function getDeepLink() {
-      const url = await linking.getInitialUrl();
-      let res = parseUrl(url);
+      let url = await Linking.getInitialURL();
+      let res = handleDeepLink(url);
       setResult(res);
     }
+
     getDeepLink();
   }, []);
 
-  const parseUrl = (
-    url: string | undefined,
-  ): {result: boolean | null; errorReason: string | null} => {
+  const handleDeepLink = (
+    url: string | null,
+  ): {success: boolean | undefined; errorReason: string | undefined} => {
     if (!url) {
-      return {result: null, errorReason: null};
-    } else if (url.indexOf('error') > -1) {
-      let match = url.match('(?<=error\\=)(.*?)(?=\\&)');
-      let errorReason: string | null = null;
-      if (match && match.length > 0) {
-        errorReason = match[0];
-      }
-      return {result: false, errorReason: errorReason};
-    } else {
-      return {result: true, errorReason: null};
+      return {success: undefined, errorReason: undefined};
     }
+
+    let deeplinkUrl = new URL(url);
+
+    let error = deeplinkUrl.searchParams.get('error');
+    if (error) {
+      return {success: false, errorReason: error!};
+    }
+
+    return {success: true, errorReason: undefined};
   };
 
   const isDarkMode = useColorScheme() === 'dark';
@@ -100,10 +101,10 @@ const App = () => {
         <View style={backgroundStyle}>
           <Button title="Perform action" disabled={true} />
         </View>
-        {result.result != null && (
+        {result.success !== undefined && (
           <View>
             <Text>
-              {result.result ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}
+              {result.success ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}
             </Text>
           </View>
         )}
@@ -132,18 +133,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-class DeepLinking {
-  async getInitialUrl(): Promise<string | undefined> {
-    const initialUrl = await Linking.getInitialURL();
-    return initialUrl ?? undefined;
-  }
-
-  addEventListener(type: 'url', handler: (event: {url: string}) => void): void {
-    Linking.addEventListener(type, event => {
-      handler(event);
-    });
-  }
-}
 
 export default App;
