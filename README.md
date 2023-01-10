@@ -39,8 +39,11 @@ This example can be run locally to test the flows.
 Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
 - Test Service: `true`
 
+For web client the Consent Template need the following property:
+- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`
+
 The Consent Template need the following property:
-- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup, truidtest://complete-signup` 
+- `redirect_uris`: truidtest://complete-signup` 
 
 _Note:_
 
@@ -61,12 +64,12 @@ Start the backend:
 
 
 If you are testing the app to app flow, set the redirect uri to the one used by the example app:
-```
+```bash
 $ export TRUID_REDIRECT_URI=truidtest://complete-signup
 ```
 If you are testing the web client the redirect uri need to be `http://localhost:8080/truid/v1/complete-signup` which is the default
 
-```
+```bash
 $ export TRUID_CLIENT_ID=...
 $ export TRUID_CLIENT_SECRET=...
 $ docker-compose up
@@ -110,13 +113,13 @@ Android Studio with emulator supporting Android API v28 or later and including G
 
 Setup:
 
-```
+```bash
 $ cd example-app
 $ yarn install
 ```
 
 Change the redirect uri to the one used by the example app
-```
+```bash
 $ export TRUID_REDIRECT_URI=truidtest://complete-signup
 ```
 
@@ -124,11 +127,15 @@ Start the emulator in Android Studio - Device manager
 
 Give emulator access to host localhost:8080 where example-backend is running
 
-`$ adb reverse tcp:8080 tcp:8080`
+```bash
+$ adb reverse tcp:8080 tcp:8080
+```
 
 Start the app
 
-`$ yarn run android`
+```bash
+$ yarn run android
+```
 
 ### Ios
 TBD
