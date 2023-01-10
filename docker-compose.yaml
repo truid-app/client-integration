@@ -7,7 +7,6 @@ services:
       - TRUID_CLIENT_ID
       - TRUID_CLIENT_SECRET
       - TRUID_BASEPATH
-      - TRUID_REDIRECT_URI
       - EXAMPLE_DOMAIN
   example-web:
     image: example-web
