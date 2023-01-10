@@ -31,11 +31,6 @@ $ docker build . -t example-web
 ```
 
 ## Try it
-
-There are two main flows with slightly different setup
-1. Web Client Flow: The flow starts in the browser, either on the same device where Truid is installed or a browser on a second device
-2. App to App Flow: The flow starts in an app that uses Truid for login
-
 ### Register a Service
 
 Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
@@ -95,7 +90,8 @@ On the phone, point the browser to `http://localhost:8080/index.html`
 ### Android
 
 Prerequisites:
-Android Studio with emulator supporting Android API v28 or later and including Google Play Store
+1. Android Studio 
+2. Emulator supporting Android API v28 or later and including Google Play Store or a USB connected Android Phone with developer mode activated
 
 Install Yarn  
 ```bash
@@ -122,6 +118,11 @@ Start the example app
 ```bash
 $ yarn run android
 ```
+
+_Note_
+
+When being redirected back to the Example App Android will ask if the link should be opened in the app or the browser. This can be avoided in a production environment if the domain in the redirect url is registered.
+See [official Android docs](https://developer.android.com/training/app-links/verify-android-applinks)
 
 ### Ios
 TBD
