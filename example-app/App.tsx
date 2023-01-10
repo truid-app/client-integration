@@ -20,9 +20,9 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import URL from 'url-parse';
+
 const Header = () => {
   return (
     <ImageBackground
@@ -40,10 +40,16 @@ const Header = () => {
 };
 
 const App = () => {
-  const [result, setResult] = React.useState<{
-    success: boolean | undefined;
-    errorReason: string | undefined;
-  }>({success: undefined, errorReason: undefined});
+  const [result, setResult] = React.useState<
+    | {
+        success: true;
+      }
+    | {
+        success: false;
+        errorReason: string;
+      }
+    | undefined
+  >(undefined);
 
   React.useEffect(() => {
     Linking.addEventListener('url', event => {
@@ -61,9 +67,17 @@ const App = () => {
 
   const handleDeepLink = (
     url: string | null,
-  ): {success: boolean | undefined; errorReason: string | undefined} => {
+  ):
+    | {
+        success: true;
+      }
+    | {
+        success: false;
+        errorReason: string;
+      }
+    | undefined => {
     if (!url) {
-      return {success: undefined, errorReason: undefined};
+      return;
     }
 
     let deeplinkUrl = new URL(url, true);
@@ -72,7 +86,7 @@ const App = () => {
       return {success: false, errorReason: error!};
     }
 
-    return {success: true, errorReason: undefined};
+    return {success: true};
   };
 
   const isDarkMode = useColorScheme() === 'dark';
@@ -100,7 +114,7 @@ const App = () => {
         <View style={backgroundStyle}>
           <Button title="Perform action" disabled={true} />
         </View>
-        {result.success !== undefined && (
+        {result && (
           <View>
             <Text>
               {result.success ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}

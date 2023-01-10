@@ -33,10 +33,8 @@ $ docker build . -t example-web
 ## Try it
 ### Register a Service
 
-Register a Service and a Consent Template in Truid to obtain OAuth2 client credentials. The service need the following property:
+Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
 - Test Service: `true`
-
-For web client the Consent Template need the following property:
 - `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`
 
 _Note:_
