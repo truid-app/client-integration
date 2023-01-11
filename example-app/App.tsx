@@ -20,8 +20,8 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-
 import {Colors} from 'react-native/Libraries/NewAppScreen';
+import URL from 'url-parse';
 
 const Header = () => {
   return (
@@ -40,6 +40,55 @@ const Header = () => {
 };
 
 const App = () => {
+  const [result, setResult] = React.useState<
+    | {
+        success: true;
+      }
+    | {
+        success: false;
+        errorReason: string;
+      }
+    | undefined
+  >(undefined);
+
+  React.useEffect(() => {
+    Linking.addEventListener('url', event => {
+      setResult(handleDeepLink(event.url));
+    });
+
+    async function getDeepLink() {
+      let url = await Linking.getInitialURL();
+      let res = handleDeepLink(url);
+      setResult(res);
+    }
+
+    getDeepLink();
+  }, []);
+
+  const handleDeepLink = (
+    url: string | null,
+  ):
+    | {
+        success: true;
+      }
+    | {
+        success: false;
+        errorReason: string;
+      }
+    | undefined => {
+    if (!url) {
+      return;
+    }
+
+    let deeplinkUrl = new URL(url, true);
+    let error = deeplinkUrl.query.error;
+    if (error) {
+      return {success: false, errorReason: error!};
+    }
+
+    return {success: true};
+  };
+
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
@@ -65,6 +114,13 @@ const App = () => {
         <View style={backgroundStyle}>
           <Button title="Perform action" disabled={true} />
         </View>
+        {result && (
+          <View>
+            <Text>
+              {result.success ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

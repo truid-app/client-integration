@@ -31,18 +31,15 @@ $ docker build . -t example-web
 ```
 
 ## Try it
+### Register a Service
 
-This example can be run locally to test the flows.
-
-### Register a client
-
-Register an OAuth2 client in Truid, having the following properties:
-- Test Client: `true`
-- `redirect_uri`: `http://localhost:8080/truid/v1/complete-signup`
+Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
+- Test Service: `true`
+- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`
 
 _Note:_
 
-This example runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
+One of the redirect uris runs over plain `http` and on `localhost`. This is not secure, and only works on a test client.
 
 Currently, the process of configuring a service in Truid requires contacting the Truid support and ask for a service to be registered.
 
@@ -54,7 +51,7 @@ Prerequisites:
 
 Start the backend:
 
-```
+```bash
 $ export TRUID_CLIENT_ID=...
 $ export TRUID_CLIENT_SECRET=...
 $ docker-compose up
@@ -70,7 +67,7 @@ The QR flow for remote login is not yet fully implemented, and will return acces
 
 ### Try the web client on an Android phone
 
-Connect the Android phone using USB
+Connect the Android phone using USB, developer mode need to be activated on the phone
 
 Forward the 8080 port to localhost:
 
@@ -86,32 +83,44 @@ Connect the iPhone using USB
 
 On the phone, point the browser to `http://localhost:8080/index.html`
 
-### Start the app
+### Try the App to App Flow
 
-### Android 
+### Android
 
 Prerequisites:
-Android Studio with emulator supporting Android API v28 or later and including Google Play Store
+1. Android Studio 
+2. Emulator supporting Android API v28 or later and including Google Play Store or a USB connected Android Phone with developer mode activated
 
-
-`$ npm install -g yarn`
+Install Yarn  
+```bash
+$ npm install -g yarn
+```
 
 Setup:
 
-```
+```bash
 $ cd example-app
 $ yarn install
 ```
 
-Start the emulator in Android Studio - Device manager
+Start the emulator in Android Studio - Device manager or connect your phone with USB
 
-Give emulator access to host localhost:8080 where example-backend is running
+Give emulator/phone access to host localhost:8080 where example-backend is running
 
-`$ adb reverse tcp:8080 tcp:8080`
+```bash
+$ adb reverse tcp:8080 tcp:8080
+```
 
-Start the app
+Start the example app
 
-`$ yarn run android`
+```bash
+$ yarn run android
+```
+
+_Note_
+
+When being redirected back to the Example App Android will ask if the link should be opened in the app or the browser. This can be avoided in a production environment if the domain in the redirect url is verified.
+On Android the URL should work as an [Android App Link](https://developer.android.com/training/app-links/verify-android-applinks) to open the app, and on iOS it should works as an [Universal Link](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content) to open the app.
 
 ### Ios
 TBD
