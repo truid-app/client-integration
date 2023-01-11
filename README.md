@@ -119,8 +119,8 @@ $ yarn run android
 
 _Note_
 
-When being redirected back to the Example App Android will ask if the link should be opened in the app or the browser. This can be avoided in a production environment if the domain in the redirect url is registered.
-See [official Android docs](https://developer.android.com/training/app-links/verify-android-applinks)
+When being redirected back to the Example App Android will ask if the link should be opened in the app or the browser. This can be avoided in a production environment if the domain in the redirect url is verified.
+On Android the URL should work as an [Android App Link](https://developer.android.com/training/app-links/verify-android-applinks) to open the app, and on iOS it should works as an [Universal Link](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content) to open the app.
 
 ### Ios
 TBD
