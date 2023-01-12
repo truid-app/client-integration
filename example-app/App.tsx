@@ -7,7 +7,7 @@
  *
  * @format
  */
-
+import {EXAMPLE_DOMAIN} from '@env';
 import React from 'react';
 import {
   Button,
@@ -96,7 +96,7 @@ const App = () => {
   };
 
   const confirmSignup = React.useCallback(() => {
-    Linking.openURL('http://localhost:8080/truid/v1/confirm-signup');
+    Linking.openURL(`${EXAMPLE_DOMAIN}/truid/v1/confirm-signup`);
   }, []);
 
   return (
