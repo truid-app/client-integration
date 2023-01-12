@@ -54,6 +54,9 @@ class TruidSignupFlow(
     @Value("\${oauth2.clientSecret}")
     val clientSecret: String,
 
+    @Value("\${oauth2.redirectUri}")
+    val redirectUri: String,
+
     @Value("\${oauth2.truid.signup-endpoint}")
     val truidSignupEndpoint: String,
 
@@ -82,7 +85,7 @@ class TruidSignupFlow(
             .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
             .addParameter("scope", "truid.app/data-point/email")
-            .addParameter("redirect_uri", "$publicDomain/truid/v1/complete-signup")
+            .addParameter("redirect_uri", redirectUri)
             .addParameter("state", createOauth2State(session))
             .addParameter("code_challenge", createOauth2CodeChallenge(session))
             .addParameter("code_challenge_method", "S256")
@@ -114,7 +117,7 @@ class TruidSignupFlow(
                 val body = LinkedMultiValueMap<String, String>()
                 body.add("grant_type", "authorization_code")
                 body.add("code", code)
-                body.add("redirect_uri", "$publicDomain/truid/v1/complete-signup")
+                body.add("redirect_uri", redirectUri)
                 body.add("client_id", clientId)
                 body.add("client_secret", clientSecret)
                 body.add("code_verifier", getOauth2CodeVerifier(session))
