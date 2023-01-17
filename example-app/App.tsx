@@ -40,16 +40,7 @@ const Header = () => {
 };
 
 const App = () => {
-  const [result, setResult] = React.useState<
-    | {
-        success: true;
-      }
-    | {
-        success: false;
-        errorReason: string;
-      }
-    | undefined
-  >(undefined);
+  const [result, setResult] = React.useState<DeepLinkResult>(undefined);
 
   React.useEffect(() => {
     Linking.addEventListener('url', event => {
@@ -65,17 +56,7 @@ const App = () => {
     getDeepLink();
   }, []);
 
-  const handleDeepLink = (
-    url: string | null,
-  ):
-    | {
-        success: true;
-      }
-    | {
-        success: false;
-        errorReason: string;
-      }
-    | undefined => {
+  const handleDeepLink = (url: string | null): DeepLinkResult => {
     if (!url) {
       return;
     }
@@ -125,6 +106,16 @@ const App = () => {
     </SafeAreaView>
   );
 };
+
+type DeepLinkResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errorReason: string;
+    }
+  | undefined;
 
 const styles = StyleSheet.create({
   background: {

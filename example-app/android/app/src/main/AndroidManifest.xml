@@ -10,11 +10,7 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data
-              android:scheme="http"
-              android:host="localhost"
-              android:pathPrefix="/truid/v1/complete-signup"
-        />
+        <data android:scheme="http" android:host="localhost" android:pathPrefix="/truid/v1/complete-signup"/>
       </intent-filter>
     </activity>
   </application>
