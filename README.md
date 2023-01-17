@@ -105,6 +105,7 @@ EXAMPLE_DOMAIN=http://localhost:8080
 ```bash
 $ yarn run android
 ```
+The app should install and start automatically 
 
 _Note_
 
@@ -114,8 +115,10 @@ On Android the URL should work as an [Android App Link](https://developer.androi
 
 ## Try it on IOS + Mac
 
-### Register a Service
+On iOS we need to run on a physical phone, the simulators doesn't work because we cannot reach app store and install the Truid App.
 
+
+### Register a Service
 On your Mac, find the hostname your phone can use to access example-backend running in docker locally. Can be found under System Preferences -> Sharing
 It should be an address that ends with .local. (lets call this address `your_hostname.local`)
 
@@ -176,6 +179,7 @@ Prerequisites:
 1. Xcode
 2. Yarn (Install by running `$ npm install -g yarn`)
 
+Open the ios workspace in Xcode (example-app/ios/ExampleApp.xcworkspace (note: not ExampleApp.xcodeproj))
 In order to run react native on an iphone code signing is required in Xcode, this is covered in [react-native documentation](https://reactnative.dev/docs/running-on-device) 
 
 Edit example-app/.env to
@@ -183,11 +187,5 @@ Edit example-app/.env to
 EXAMPLE_DOMAIN=http://<your_hostname.local>:8080
 ```
 
-Start the example app 
-
-```bash
-$ cd example-app
-$ yarn run ios
-```
-
+Start the example app on your device in Xcode
 
