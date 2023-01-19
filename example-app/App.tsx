@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
-import URL from 'url-parse';
+import * as qs from 'qs';
 
 const Header = () => {
   return (
@@ -61,10 +61,11 @@ const App = () => {
       return;
     }
 
-    let deeplinkUrl = new URL(url, true);
-    let error = deeplinkUrl.query.error;
+    let parsedQs = qs.parse(url.substring(url.indexOf('?') + 1));
+    let error = parsedQs.error;
+
     if (error) {
-      return {success: false, errorReason: error!};
+      return {success: false, errorReason: error.toString()!};
     }
 
     return {success: true};
