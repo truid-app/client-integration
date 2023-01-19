@@ -29,7 +29,6 @@
                 <data
                     android:scheme="http"
                     android:host="localhost"
-                    android:port="8080"
                     android:pathPrefix="/truid/v1/complete-signup" />
             </intent-filter>
         </activity>
