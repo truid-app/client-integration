@@ -39,17 +39,17 @@ const Header = () => {
   );
 };
 
-const App = () => {
-  type DeepLinkResult =
-    | {
-        success: true;
-      }
-    | {
-        success: false;
-        errorReason: string;
-      }
-    | undefined;
+type DeepLinkResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errorReason: string;
+    }
+  | undefined;
 
+const App = () => {
   const [result, setResult] = React.useState<DeepLinkResult>(undefined);
 
   React.useEffect(() => {
