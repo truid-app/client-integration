@@ -7,7 +7,7 @@
  *
  * @format
  */
-import {EXAMPLE_DOMAIN} from '@env';
+import {TRUID_EXAMPLE_DOMAIN} from '@env';
 import React from 'react';
 import {
   Button,
@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
-import * as qs from 'qs';
+import URL from 'url-parse';
 
 const Header = () => {
   return (
@@ -49,8 +49,7 @@ const App = () => {
 
     async function getDeepLink() {
       let url = await Linking.getInitialURL();
-      let res = handleDeepLink(url);
-      setResult(res);
+      setResult(handleDeepLink(url));
     }
 
     getDeepLink();
@@ -61,11 +60,10 @@ const App = () => {
       return;
     }
 
-    let parsedQs = qs.parse(url.substring(url.indexOf('?') + 1));
-    let error = parsedQs.error;
-
+    let deeplinkUrl = new URL(url, true);
+    let error = deeplinkUrl.query.error;
     if (error) {
-      return {success: false, errorReason: error.toString()!};
+      return {success: false, errorReason: error!};
     }
 
     return {success: true};
@@ -78,7 +76,7 @@ const App = () => {
   };
 
   const confirmSignup = React.useCallback(() => {
-    Linking.openURL(`${EXAMPLE_DOMAIN}/truid/v1/confirm-signup`);
+    Linking.openURL(`${TRUID_EXAMPLE_DOMAIN}/truid/v1/confirm-signup`);
   }, []);
 
   return (

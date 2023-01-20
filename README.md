@@ -99,7 +99,7 @@ Start the example app
 
 Look in example-app/.env and ensure it correct:
 ```
-EXAMPLE_DOMAIN=http://localhost:8080
+TRUID_EXAMPLE_DOMAIN=http://localhost:8080
 ```
 
 ```bash
@@ -156,7 +156,7 @@ In a production environment, where we can use a registered domain, the redirect 
 ```bash
 $ export TRUID_CLIENT_ID=...
 $ export TRUID_CLIENT_SECRET=...
-$ export EXAMPLE_DOMAIN=http://<your_hostname.local>:8080
+$ export TRUID_EXAMPLE_DOMAIN=http://<your_hostname.local>:8080
 $ docker-compose up
 ```
 
@@ -184,7 +184,7 @@ In order to run react native on an iphone code signing is required in Xcode, thi
 
 Edit example-app/.env to
 ```
-EXAMPLE_DOMAIN=http://<your_hostname.local>:8080
+TRUID_EXAMPLE_DOMAIN=http://<your_hostname.local>:8080
 ```
 
 Start the example app on your device in Xcode

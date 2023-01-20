@@ -26,7 +26,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>http</string>
+			<string>app.truid.exampleapp</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>http</string>
