@@ -40,6 +40,16 @@ const Header = () => {
 };
 
 const App = () => {
+  type DeepLinkResult =
+    | {
+        success: true;
+      }
+    | {
+        success: false;
+        errorReason: string;
+      }
+    | undefined;
+
   const [result, setResult] = React.useState<DeepLinkResult>(undefined);
 
   React.useEffect(() => {
@@ -105,16 +115,6 @@ const App = () => {
     </SafeAreaView>
   );
 };
-
-type DeepLinkResult =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      errorReason: string;
-    }
-  | undefined;
 
 const styles = StyleSheet.create({
   background: {
