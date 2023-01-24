@@ -7,7 +7,7 @@
  *
  * @format
  */
-
+import {TRUID_EXAMPLE_DOMAIN} from '@env';
 import React from 'react';
 import {
   Button,
@@ -20,8 +20,8 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-
 import {Colors} from 'react-native/Libraries/NewAppScreen';
+import URL from 'url-parse';
 
 const Header = () => {
   return (
@@ -39,7 +39,46 @@ const Header = () => {
   );
 };
 
+type DeepLinkResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errorReason: string;
+    }
+  | undefined;
+
 const App = () => {
+  const [result, setResult] = React.useState<DeepLinkResult>(undefined);
+
+  React.useEffect(() => {
+    Linking.addEventListener('url', event => {
+      setResult(handleDeepLink(event.url));
+    });
+
+    async function getDeepLink() {
+      let url = await Linking.getInitialURL();
+      setResult(handleDeepLink(url));
+    }
+
+    getDeepLink();
+  }, []);
+
+  const handleDeepLink = (url: string | null): DeepLinkResult => {
+    if (!url) {
+      return;
+    }
+
+    let deeplinkUrl = new URL(url, true);
+    let error = deeplinkUrl.query.error;
+    if (error) {
+      return {success: false, errorReason: error};
+    }
+
+    return {success: true};
+  };
+
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
@@ -47,7 +86,7 @@ const App = () => {
   };
 
   const confirmSignup = React.useCallback(() => {
-    Linking.openURL('http://localhost:8080/truid/v1/confirm-signup');
+    Linking.openURL(`${TRUID_EXAMPLE_DOMAIN}/truid/v1/confirm-signup`);
   }, []);
 
   return (
@@ -65,6 +104,13 @@ const App = () => {
         <View style={backgroundStyle}>
           <Button title="Perform action" disabled={true} />
         </View>
+        {result && (
+          <View>
+            <Text>
+              {result.success ? 'SUCCESS' : `FAILURE: ${result.errorReason}`}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

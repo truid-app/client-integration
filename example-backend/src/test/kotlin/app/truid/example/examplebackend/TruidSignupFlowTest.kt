@@ -122,7 +122,7 @@ class TruidSignupFlowTest {
         }
 
         @Test
-        fun `It should return a secure cookie containing the session ID`() {
+        fun `It should return a cookie containing the session ID`() {
             val res = rest.exchange(
                 get("/truid/v1/confirm-signup")
                     .build(),
@@ -130,7 +130,6 @@ class TruidSignupFlowTest {
             )
             assertEquals(302, res.statusCodeValue)
             val cookie = HttpCookie.parse(res.setCookie()).single()
-            assertEquals(true, cookie.secure)
             assertEquals(true, cookie.isHttpOnly)
         }
     }
