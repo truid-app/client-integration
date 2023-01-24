@@ -63,9 +63,6 @@ class TruidSignupFlow(
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
 
-    @Value("\${app.domain}")
-    val publicDomain: String,
-
     @Value("\${web.success}")
     val webSuccess: URI,
 

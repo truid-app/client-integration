@@ -73,7 +73,7 @@ const App = () => {
     let deeplinkUrl = new URL(url, true);
     let error = deeplinkUrl.query.error;
     if (error) {
-      return {success: false, errorReason: error!};
+      return {success: false, errorReason: error};
     }
 
     return {success: true};
