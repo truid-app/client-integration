@@ -208,7 +208,9 @@ class TruidSignupFlow(
         } else {
             //If access token is expired, use refresh token to get a new one
             refreshToken()
-            getPersistedToken()!!.first.accessToken
+            val (refreshedToken, _) = getPersistedToken()
+                ?: throw RuntimeException("No token after refresh")
+            return refreshedToken.accessToken
         }
     }
 
@@ -218,7 +220,7 @@ class TruidSignupFlow(
         // invalidates all access tokens and refresh tokens in accordance to
         // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
         refreshMutex.withLock {
-            val (tokenResponse, expiry) = getPersistedToken()!!
+            val (tokenResponse, expiry) = getPersistedToken() ?: throw RuntimeException("No token to refresh")
 
             if (expiry > LocalDateTime.now()) {
                 return
