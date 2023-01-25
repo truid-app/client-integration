@@ -1,7 +1,8 @@
 package app.truid.example.examplebackend
 
 import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders.*
@@ -78,7 +79,7 @@ class TruidSignupFlow(
 ) {
     //This variable acts as our persistence in this example
     private var _persistedTokenResponse: Pair<TokenResponse, LocalDateTime>? = null
-
+    private val refreshMutex = Mutex()
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
@@ -211,11 +212,11 @@ class TruidSignupFlow(
     }
 
     private suspend fun refreshToken() {
-
         // Check if token was refreshed by another thread, two refreshes with same refresh token
         // invalidates all access tokens and refresh tokens in accordance to
         // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
-        synchronized(this){
+
+        refreshMutex.withLock {
             val persistedToken = getPersistedToken()!!
 
             if (persistedToken.second > LocalDateTime.now()) {
@@ -228,13 +229,13 @@ class TruidSignupFlow(
             body.add("client_id", clientId)
             body.add("client_secret", clientSecret)
 
-            val refreshedTokenResponse = runBlocking { webClient.post()
+            val refreshedTokenResponse = webClient.post()
                 .uri(URIBuilder(truidTokenEndpoint).build())
                 .contentType(APPLICATION_FORM_URLENCODED)
                 .accept(APPLICATION_JSON)
                 .body(fromFormData(body))
                 .retrieve()
-                .awaitBody<TokenResponse>() }
+                .awaitBody<TokenResponse>()
 
             persist(refreshedTokenResponse)
         }
