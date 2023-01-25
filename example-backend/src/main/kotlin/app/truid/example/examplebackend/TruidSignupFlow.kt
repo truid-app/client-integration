@@ -213,7 +213,7 @@ class TruidSignupFlow(
             body.add("client_id", clientId)
             body.add("client_secret", clientSecret)
 
-            val tokenResponse = webClient.post()
+            val refreshedTokenResponse = webClient.post()
                 .uri(URIBuilder(truidTokenEndpoint).build())
                 .contentType(APPLICATION_FORM_URLENCODED)
                 .accept(APPLICATION_JSON)
@@ -221,8 +221,8 @@ class TruidSignupFlow(
                 .retrieve()
                 .awaitBody<TokenResponse>()
 
-            persist(tokenResponse)
-            return tokenResponse.accessToken
+            persist(refreshedTokenResponse)
+            return refreshedTokenResponse.accessToken
         }
     }
 

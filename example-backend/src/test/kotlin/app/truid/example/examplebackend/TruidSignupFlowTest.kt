@@ -148,7 +148,7 @@ class TruidSignupFlowTest {
 
         @BeforeEach
         fun `setup authorization`() {
-            WireMock.stubFor(
+            stubFor(
                 post(urlEqualTo("/oauth2/v1/token")).willReturn(
                     aResponse()
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -183,7 +183,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Complete signup should return 200`() {
 
-            WireMock.stubFor(
+            stubFor(
                 WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                     aResponse()
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -244,7 +244,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Should not allow the same state twice`() {
 
-            WireMock.stubFor(
+            stubFor(
                 WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                     aResponse()
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -288,7 +288,7 @@ class TruidSignupFlowTest {
 
         @Test
         fun `Should return 403 if the token request fails`() {
-            WireMock.stubFor(
+            stubFor(
                 post(urlEqualTo("/oauth2/v1/token")).willReturn(
                     aResponse()
                         .withStatus(403)
@@ -319,7 +319,7 @@ class TruidSignupFlowTest {
 
         @BeforeEach
         fun `setup authorization`() {
-            WireMock.stubFor(
+            stubFor(
                 post(urlEqualTo("/oauth2/v1/token")).willReturn(
                     aResponse()
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -354,7 +354,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Complete signup should return 302`() {
 
-            WireMock.stubFor(
+            stubFor(
                 WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                     aResponse()
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -440,7 +440,7 @@ class TruidSignupFlowTest {
 
         @Test
         fun `Should return 302 with error if the token request fails`() {
-            WireMock.stubFor(
+            stubFor(
                 post(urlEqualTo("/oauth2/v1/token")).willReturn(
                     aResponse()
                         .withStatus(403)
@@ -472,7 +472,7 @@ class TruidSignupFlowTest {
             @BeforeEach
             fun `Complete signup`() {
 
-                WireMock.stubFor(
+                stubFor(
                     WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                         aResponse()
                             .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -516,7 +516,7 @@ class TruidSignupFlowTest {
 
     @Test
     fun `Should use refresh token if access token is expired`(){
-        WireMock.stubFor(
+        stubFor(
             post(urlEqualTo("/oauth2/v1/token"))
                 .withRequestBody(containing("grant_type=authorization_code"))
                 .willReturn(
@@ -535,7 +535,7 @@ class TruidSignupFlowTest {
             )
         )
 
-        WireMock.stubFor(
+        stubFor(
             WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                 aResponse()
                     .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -549,7 +549,7 @@ class TruidSignupFlowTest {
         )
 
 
-        WireMock.stubFor(
+        stubFor(
             post(urlEqualTo("/oauth2/v1/token"))
                 .withRequestBody(containing("grant_type=refresh_token"))
                 .willReturn(
@@ -586,7 +586,7 @@ class TruidSignupFlowTest {
             Map::class.java,
         ).also { assertEquals(200, it.statusCodeValue) }
 
-        val res = rest.exchange(
+        rest.exchange(
             get("/truid/v1/presentation")
                 .header(COOKIE, cookie.toString())
                 .accept(MediaType.APPLICATION_JSON)
