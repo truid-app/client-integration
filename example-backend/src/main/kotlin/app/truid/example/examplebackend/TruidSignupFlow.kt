@@ -47,7 +47,7 @@ private fun random(n: Int): ByteArray {
     return result
 }
 
-class Forbidden(val error: String, message: String?): RuntimeException(message)
+class Forbidden(val error: String, message: String?) : RuntimeException(message)
 
 @RestController
 class TruidSignupFlow(
@@ -75,19 +75,19 @@ class TruidSignupFlow(
     @Value("\${web.failure}")
     val webFailure: URI,
 
-    val webClient: WebClient,
+    val webClient: WebClient
 ) {
-    //This variable acts as our persistence in this example
+    // This variable acts as our persistence in this example
     private var _persistedTokenResponse: Pair<TokenResponse, LocalDateTime>? = null
     private val refreshMutex = Mutex()
 
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ) {
         val session = exchange.session.awaitSingle()
-        //Clear data from previous runs
+        // Clear data from previous runs
         clearPersistence()
 
         val truidSignupUrl = URIBuilder(truidSignupEndpoint)
@@ -108,14 +108,12 @@ class TruidSignupFlow(
         }
     }
 
-
-
     @GetMapping("/truid/v1/complete-signup")
     suspend fun completeSignup(
         @RequestParam("code") code: String?,
         @RequestParam("state") state: String?,
         @RequestParam("error") error: String?,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ): Void? {
         val session = exchange.session.awaitSingle()
 
@@ -133,7 +131,7 @@ class TruidSignupFlow(
                 body.add("client_secret", clientSecret)
                 body.add("code_verifier", getOauth2CodeVerifier(session))
 
-                //Exchange code for access token and refresh token
+                // Exchange code for access token and refresh token
                 val tokenResponse = webClient.post()
                     .uri(URIBuilder(truidTokenEndpoint).build())
                     .contentType(APPLICATION_FORM_URLENCODED)
@@ -142,7 +140,7 @@ class TruidSignupFlow(
                     .retrieve()
                     .awaitBody<TokenResponse>()
 
-                //Get and print user email from Truid
+                // Get and print user email from Truid
                 val getPresentationUri = URIBuilder(truidPresentationEndpoint)
                     .addParameter("claims", "truid.app/claim/email/v1")
                     .build()
@@ -157,8 +155,8 @@ class TruidSignupFlow(
 
                 println(presentation)
 
-                //Persist token, so it can be accessed via GET "/truid/v1/presentation"
-                //See getAccessToken for an example of refreshing access token
+                // Persist token, so it can be accessed via GET "/truid/v1/presentation"
+                // See getAccessToken for an example of refreshing access token
                 persist(tokenResponse)
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
@@ -206,7 +204,7 @@ class TruidSignupFlow(
         return if (expires > LocalDateTime.now()) {
             tokenResponse.accessToken
         } else {
-            //If access token is expired, use refresh token to get a new one
+            // If access token is expired, use refresh token to get a new one
             refreshToken()
             val (refreshedToken, _) = getPersistedToken()
                 ?: throw RuntimeException("No token after refresh")
@@ -215,7 +213,6 @@ class TruidSignupFlow(
     }
 
     private suspend fun refreshToken() {
-
         // Synchronized, two refreshes with same refresh token
         // invalidates all access tokens and refresh tokens in accordance to
         // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
@@ -247,7 +244,7 @@ class TruidSignupFlow(
     @ExceptionHandler(Forbidden::class)
     fun handleForbidden(
         e: Forbidden,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ): Map<String, String>? {
         if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
             // Redirect to error page in the webapp flow
@@ -261,7 +258,7 @@ class TruidSignupFlow(
             exchange.response.statusCode = FORBIDDEN
 
             return mapOf(
-                "error" to e.error,
+                "error" to e.error
             )
         }
     }
@@ -300,7 +297,7 @@ class TruidSignupFlow(
     }
 
     private fun persist(tokenResponse: TokenResponse) {
-        //Subtract 5 seconds on the real expiry to create a small buffer
+        // Subtract 5 seconds on the real expiry to create a small buffer
         _persistedTokenResponse = Pair(tokenResponse, LocalDateTime.now().plusSeconds(tokenResponse.expiresIn - 5))
     }
     private fun getPersistedToken(): Pair<TokenResponse, LocalDateTime>? {

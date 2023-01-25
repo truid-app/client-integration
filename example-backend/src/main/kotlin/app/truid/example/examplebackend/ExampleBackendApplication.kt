@@ -18,8 +18,8 @@ class ExampleBackendApplication {
     ): WebSessionIdResolver {
         return CookieWebSessionIdResolver().apply {
             addCookieInitializer {
-                //Disable secure cookies if on http or the session cookie will not be saved
-                //Note: A production service in Truid cannot use a http redirect, for test only
+                // Disable secure cookies if on http or the session cookie will not be saved
+                // Note: A production service in Truid cannot use a http redirect, for test only
                 if (URL(publicDomain).protocol != "http") {
                     it.secure(true)
                 }

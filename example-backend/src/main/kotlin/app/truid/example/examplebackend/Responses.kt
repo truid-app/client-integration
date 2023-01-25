@@ -11,7 +11,7 @@ data class TokenResponse(
     val expiresIn: Long,
     @JsonProperty("token_type")
     val tokenType: String,
-    val scope: String,
+    val scope: String
 )
 data class PresentationResponse(
     val sub: String,
@@ -19,5 +19,5 @@ data class PresentationResponse(
 )
 data class PresentationResponseClaims(
     val type: String,
-    val value: String,
+    val value: String
 )
