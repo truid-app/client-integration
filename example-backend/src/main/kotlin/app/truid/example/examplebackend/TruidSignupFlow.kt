@@ -1,6 +1,7 @@
 package app.truid.example.examplebackend
 
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.runBlocking
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders.*
@@ -195,34 +196,47 @@ class TruidSignupFlow(
     }
 
     private suspend fun getAccessToken(): String {
-        val (tokenResponse, fetchDateTime) = getPersistedToken() ?: throw Forbidden(
+        val (tokenResponse, expires) = getPersistedToken() ?: throw Forbidden(
             "access_denied",
             "No access_token or refresh_token found"
         )
 
-        //Subtract 5 seconds to create a buffer
-        val dateTime = fetchDateTime.plusSeconds(tokenResponse.expiresIn - 5)
-        if (dateTime > LocalDateTime.now()) {
-            return tokenResponse.accessToken
+        return if (expires > LocalDateTime.now()) {
+            tokenResponse.accessToken
         } else {
             //If access token is expired, use refresh token to get a new one
-            val refreshToken = tokenResponse.refreshToken
+            refreshToken()
+            getPersistedToken()!!.first.accessToken
+        }
+    }
+
+    private suspend fun refreshToken() {
+
+        // Check if token was refreshed by another thread, two refreshes with same refresh token
+        // invalidates all access tokens and refresh tokens in accordance to
+        // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
+        synchronized(this){
+            val persistedToken = getPersistedToken()!!
+
+            if (persistedToken.second > LocalDateTime.now()) {
+                return
+            }
+            val refreshToken = persistedToken.first.refreshToken
             val body = LinkedMultiValueMap<String, String>()
             body.add("grant_type", "refresh_token")
             body.add("refresh_token", refreshToken)
             body.add("client_id", clientId)
             body.add("client_secret", clientSecret)
 
-            val refreshedTokenResponse = webClient.post()
+            val refreshedTokenResponse = runBlocking { webClient.post()
                 .uri(URIBuilder(truidTokenEndpoint).build())
                 .contentType(APPLICATION_FORM_URLENCODED)
                 .accept(APPLICATION_JSON)
                 .body(fromFormData(body))
                 .retrieve()
-                .awaitBody<TokenResponse>()
+                .awaitBody<TokenResponse>() }
 
             persist(refreshedTokenResponse)
-            return refreshedTokenResponse.accessToken
         }
     }
 
@@ -282,7 +296,8 @@ class TruidSignupFlow(
     }
 
     private fun persist(tokenResponse: TokenResponse) {
-        _persistedTokenResponse = Pair(tokenResponse, LocalDateTime.now())
+        //Subtract 5 seconds to create a buffer
+        _persistedTokenResponse = Pair(tokenResponse, LocalDateTime.now().plusSeconds(tokenResponse.expiresIn - 5))
     }
     private fun getPersistedToken(): Pair<TokenResponse, LocalDateTime>? {
         return _persistedTokenResponse
