@@ -3,9 +3,7 @@ package app.truid.example.examplebackend
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.post
-import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.apache.http.client.utils.URIBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -132,6 +130,15 @@ class TruidSignupFlowTest {
             val cookie = HttpCookie.parse(res.setCookie()).single()
             assertEquals(true, cookie.isHttpOnly)
         }
+        @Test
+        fun `Presentation should return a 403 if no tokens have been exchanged`() {
+            val res = rest.exchange(
+                get("/truid/v1/presentation")
+                    .build(),
+                Void::class.java,
+            )
+            assertEquals(403, res.statusCodeValue)
+        }
     }
 
     @Nested
@@ -175,6 +182,20 @@ class TruidSignupFlowTest {
 
         @Test
         fun `Complete signup should return 200`() {
+
+            WireMock.stubFor(
+                WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
+                    aResponse()
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withStatus(200)
+                        .withJsonBody(
+                            PresentationResponse(
+                                sub = "1234567abcdefg",
+                                claims = listOf(PresentationResponseClaims(type="truid.app/claim/email/v1", value="email@example.com"))),
+                        ),
+                )
+            )
+
             val res = rest.exchange(
                 get("/truid/v1/complete-signup?code=1234&state=${state}")
                     .header(COOKIE, cookie.toString())
@@ -222,6 +243,20 @@ class TruidSignupFlowTest {
 
         @Test
         fun `Should not allow the same state twice`() {
+
+            WireMock.stubFor(
+                WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
+                    aResponse()
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withStatus(200)
+                        .withJsonBody(
+                            PresentationResponse(
+                                sub = "1234567abcdefg",
+                                claims = listOf(PresentationResponseClaims(type="truid.app/claim/email/v1", value="email@example.com"))),
+                        ),
+                )
+            )
+
             val res1 = rest.exchange(
                 get("/truid/v1/complete-signup?code=1234&state=${state}")
                     .header(COOKIE, cookie.toString())
@@ -318,6 +353,20 @@ class TruidSignupFlowTest {
 
         @Test
         fun `Complete signup should return 302`() {
+
+            WireMock.stubFor(
+                WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
+                    aResponse()
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withStatus(200)
+                        .withJsonBody(
+                            PresentationResponse(
+                                sub = "1234567abcdefg",
+                                claims = listOf(PresentationResponseClaims(type="truid.app/claim/email/v1", value="email@example.com"))),
+                        ),
+                )
+            )
+
             val res = rest.exchange(
                 get("/truid/v1/complete-signup?code=1234&state=${state}")
                     .header(COOKIE, cookie.toString())
@@ -415,6 +464,137 @@ class TruidSignupFlowTest {
             assertEquals(302, res.statusCodeValue)
             assertEquals("/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
+        }
+
+        @Nested
+        inner class WithPersistedTokens {
+
+            @BeforeEach
+            fun `Complete signup`() {
+
+                WireMock.stubFor(
+                    WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
+                        aResponse()
+                            .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                            .withStatus(200)
+                            .withJsonBody(
+                                PresentationResponse(
+                                    sub = "1234567abcdefg",
+                                    claims = listOf(PresentationResponseClaims(type="truid.app/claim/email/v1", value="email@example.com"))),
+                            ),
+                    )
+                )
+
+                val res = rest.exchange(
+                    get("/truid/v1/complete-signup?code=1234&state=${state}")
+                        .header(COOKIE, cookie.toString())
+                        .accept(MediaType.TEXT_HTML)
+                        .build(),
+                    Void::class.java,
+                )
+                val url = URIBuilder(res.location())
+                assertEquals(302, res.statusCodeValue)
+                assertEquals("/success.html", url.path)
+            }
+
+
+            @Test
+            fun `Should return presentation`() {
+                val res = rest.exchange(
+                    get("/truid/v1/presentation")
+                        .header(COOKIE, cookie.toString())
+                        .accept(MediaType.APPLICATION_JSON)
+                        .build(),
+                    PresentationResponse::class.java,
+                )
+                assertEquals(200, res.statusCodeValue)
+                assertEquals("1234567abcdefg", res.body!!.sub)
+            }
+
+        }
+    }
+
+    @Test
+    fun `Should use refresh token if access token is expired`(){
+        WireMock.stubFor(
+            post(urlEqualTo("/oauth2/v1/token"))
+                .withRequestBody(containing("grant_type=authorization_code"))
+                .willReturn(
+                aResponse()
+                    .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                    .withStatus(200)
+                    .withJsonBody(
+                        mapOf(
+                            "access_token" to "access-123",
+                            "token_type" to "bearer",
+                            "expires_in" to 1,
+                            "refresh_token" to "refresh-123",
+                            "scope" to "truid.app/data-point/email",
+                        ),
+                    ),
+            )
+        )
+
+        WireMock.stubFor(
+            WireMock.get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
+                aResponse()
+                    .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                    .withStatus(200)
+                    .withJsonBody(
+                        PresentationResponse(
+                            sub = "1234567abcdefg",
+                            claims = listOf(PresentationResponseClaims(type="truid.app/claim/email/v1", value="email@example.com"))),
+                    ),
+            )
+        )
+
+
+        WireMock.stubFor(
+            post(urlEqualTo("/oauth2/v1/token"))
+                .withRequestBody(containing("grant_type=refresh_token"))
+                .willReturn(
+                    aResponse()
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                        .withStatus(200)
+                        .withJsonBody(
+                            mapOf(
+                                "access_token" to "access-456",
+                                "token_type" to "bearer",
+                                "expires_in" to 1,
+                                "refresh_token" to "refresh-456",
+                                "scope" to "truid.app/data-point/email",
+                            ),
+                        ),
+                )
+        )
+
+        val res1 = rest.exchange(
+            get("/truid/v1/confirm-signup")
+                .build(),
+            Void::class.java,
+        )
+        assertEquals(302, res1.statusCodeValue)
+
+        val cookie = HttpCookie.parse(res1.setCookie()).single()
+        val url = URIBuilder(res1.location())
+        val state = url.getParam("state")!!
+
+        rest.exchange(
+            get("/truid/v1/complete-signup?code=1234&state=${state}")
+                .header(COOKIE, cookie.toString())
+                .build(),
+            Map::class.java,
+        ).also { assertEquals(200, it.statusCodeValue) }
+
+        val res = rest.exchange(
+            get("/truid/v1/presentation")
+                .header(COOKIE, cookie.toString())
+                .accept(MediaType.APPLICATION_JSON)
+                .build(),
+            PresentationResponse::class.java,
+        ).also {
+            assertEquals(200, it.statusCodeValue)
+            assertEquals("1234567abcdefg", it.body!!.sub)
         }
     }
 }

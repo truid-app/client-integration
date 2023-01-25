@@ -3,7 +3,7 @@ package app.truid.example.examplebackend
 import kotlinx.coroutines.reactor.awaitSingle
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders.LOCATION
+import org.springframework.http.HttpHeaders.*
 import org.springframework.http.HttpStatus.ACCEPTED
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.FOUND
@@ -26,6 +26,7 @@ import org.springframework.web.server.WebSession
 import java.net.URI
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.time.LocalDateTime
 import java.util.Base64
 
 private val sha256MessageDigest = MessageDigest.getInstance("SHA-256")
@@ -63,6 +64,9 @@ class TruidSignupFlow(
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
 
+    @Value("\${oauth2.truid.presentation-endpoint}")
+    val truidPresentationEndpoint: String,
+
     @Value("\${web.success}")
     val webSuccess: URI,
 
@@ -71,12 +75,17 @@ class TruidSignupFlow(
 
     val webClient: WebClient,
 ) {
+    //This variable acts as our persistence in this example
+    private var _persistedTokenResponse: Pair<TokenResponse, LocalDateTime>? = null
+
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
         exchange: ServerWebExchange,
     ) {
         val session = exchange.session.awaitSingle()
+        //Clear data from previous runs
+        clearPersistence()
 
         val truidSignupUrl = URIBuilder(truidSignupEndpoint)
             .addParameter("response_type", "code")
@@ -95,6 +104,8 @@ class TruidSignupFlow(
             exchange.response.statusCode = FOUND
         }
     }
+
+
 
     @GetMapping("/truid/v1/complete-signup")
     suspend fun completeSignup(
@@ -119,15 +130,33 @@ class TruidSignupFlow(
                 body.add("client_secret", clientSecret)
                 body.add("code_verifier", getOauth2CodeVerifier(session))
 
+                //Exchange code for access token and refresh token
                 val tokenResponse = webClient.post()
                     .uri(URIBuilder(truidTokenEndpoint).build())
                     .contentType(APPLICATION_FORM_URLENCODED)
                     .accept(APPLICATION_JSON)
                     .body(fromFormData(body))
                     .retrieve()
-                    .awaitBody<Map<String, String>>()
+                    .awaitBody<TokenResponse>()
 
-                // TODO: Store tokenResponse["refresh_token"]
+                //Get and print user email from Truid
+                val getPresentationUri = URIBuilder(truidPresentationEndpoint)
+                    .addParameter("claims", "truid.app/claim/email/v1")
+                    .build()
+
+                val presentation = webClient
+                    .get()
+                    .uri(getPresentationUri)
+                    .accept(APPLICATION_JSON)
+                    .header(AUTHORIZATION, "Bearer ${tokenResponse.accessToken}")
+                    .retrieve()
+                    .awaitBody<Any>()
+
+                println(presentation)
+
+                //Persist token, so it can be accessed via GET "/truid/v1/presentation"
+                //See getAccessToken for an example of refreshing access token
+                persist(tokenResponse)
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
             }
@@ -142,6 +171,58 @@ class TruidSignupFlow(
             // Return a 200 response in case of an AJAX request
             exchange.response.statusCode = OK
             return null
+        }
+    }
+
+    @GetMapping(
+        path = ["/truid/v1/presentation"],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    suspend fun getPresentation(): PresentationResponse {
+        val accessToken = getAccessToken()
+
+        val getPresentationUri = URIBuilder(truidPresentationEndpoint)
+            .addParameter("claims", "truid.app/claim/email/v1")
+            .build()
+
+        return webClient
+            .get()
+            .uri(getPresentationUri)
+            .accept(APPLICATION_JSON)
+            .header(AUTHORIZATION, "Bearer $accessToken")
+            .retrieve()
+            .awaitBody()
+    }
+
+    private suspend fun getAccessToken(): String {
+        val (tokenResponse, fetchDateTime) = getPersistedToken() ?: throw Forbidden(
+            "access_denied",
+            "No access_token or refresh_token found"
+        )
+
+        //Subtract 5 seconds to create a buffer
+        val dateTime = fetchDateTime.plusSeconds(tokenResponse.expiresIn - 5)
+        if (dateTime > LocalDateTime.now()) {
+            return tokenResponse.accessToken
+        } else {
+            //If access token is expired, use refresh token to get a new one
+            val refreshToken = tokenResponse.refreshToken
+            val body = LinkedMultiValueMap<String, String>()
+            body.add("grant_type", "refresh_token")
+            body.add("refresh_token", refreshToken)
+            body.add("client_id", clientId)
+            body.add("client_secret", clientSecret)
+
+            val tokenResponse = webClient.post()
+                .uri(URIBuilder(truidTokenEndpoint).build())
+                .contentType(APPLICATION_FORM_URLENCODED)
+                .accept(APPLICATION_JSON)
+                .body(fromFormData(body))
+                .retrieve()
+                .awaitBody<TokenResponse>()
+
+            persist(tokenResponse)
+            return tokenResponse.accessToken
         }
     }
 
@@ -194,5 +275,16 @@ class TruidSignupFlow(
 
     private fun getOauth2CodeVerifier(session: WebSession): String? {
         return session.attributes["oauth2-code-verifier"] as String?
+    }
+
+    private fun clearPersistence() {
+        _persistedTokenResponse = null
+    }
+
+    private fun persist(tokenResponse: TokenResponse) {
+        _persistedTokenResponse = Pair(tokenResponse, LocalDateTime.now())
+    }
+    private fun getPersistedToken(): Pair<TokenResponse, LocalDateTime>? {
+        return _persistedTokenResponse
     }
 }
