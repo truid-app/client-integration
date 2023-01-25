@@ -80,6 +80,7 @@ class TruidSignupFlow(
     //This variable acts as our persistence in this example
     private var _persistedTokenResponse: Pair<TokenResponse, LocalDateTime>? = null
     private val refreshMutex = Mutex()
+
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
@@ -212,17 +213,17 @@ class TruidSignupFlow(
     }
 
     private suspend fun refreshToken() {
-        // Check if token was refreshed by another thread, two refreshes with same refresh token
+
+        // Synchronized, two refreshes with same refresh token
         // invalidates all access tokens and refresh tokens in accordance to
         // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
-
         refreshMutex.withLock {
-            val persistedToken = getPersistedToken()!!
+            val (tokenResponse, expiry) = getPersistedToken()!!
 
-            if (persistedToken.second > LocalDateTime.now()) {
+            if (expiry > LocalDateTime.now()) {
                 return
             }
-            val refreshToken = persistedToken.first.refreshToken
+            val refreshToken = tokenResponse.refreshToken
             val body = LinkedMultiValueMap<String, String>()
             body.add("grant_type", "refresh_token")
             body.add("refresh_token", refreshToken)
@@ -297,7 +298,7 @@ class TruidSignupFlow(
     }
 
     private fun persist(tokenResponse: TokenResponse) {
-        //Subtract 5 seconds to create a buffer
+        //Subtract 5 seconds on the real expiry to create a small buffer
         _persistedTokenResponse = Pair(tokenResponse, LocalDateTime.now().plusSeconds(tokenResponse.expiresIn - 5))
     }
     private fun getPersistedToken(): Pair<TokenResponse, LocalDateTime>? {
