@@ -153,7 +153,7 @@ class TruidSignupFlow(
                     .accept(APPLICATION_JSON)
                     .header(AUTHORIZATION, "Bearer ${tokenResponse.accessToken}")
                     .retrieve()
-                    .awaitBody<Any>()
+                    .awaitBody<PresentationResponse>()
 
                 println(presentation)
 
