@@ -54,13 +54,6 @@ class TruidSignupFlowTest {
             )
             assertEquals(302, res.statusCodeValue)
 
-
-
-
-
-
-
-
             val url = URIBuilder(res.location())
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
