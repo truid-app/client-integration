@@ -1,16 +1,13 @@
 package app.truid.example.examplebackend
 
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders.LOCATION
-import org.springframework.http.HttpStatus.ACCEPTED
-import org.springframework.http.HttpStatus.FORBIDDEN
-import org.springframework.http.HttpStatus.FOUND
-import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
-import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
@@ -44,7 +41,7 @@ private fun random(n: Int): ByteArray {
     return result
 }
 
-class Forbidden(val error: String, message: String?): RuntimeException(message)
+class Forbidden(val error: String, message: String?) : RuntimeException(message)
 
 @RestController
 class TruidSignupFlow(
@@ -63,20 +60,29 @@ class TruidSignupFlow(
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
 
+    @Value("\${oauth2.truid.presentation-endpoint}")
+    val truidPresentationEndpoint: String,
+
     @Value("\${web.success}")
     val webSuccess: URI,
 
     @Value("\${web.failure}")
     val webFailure: URI,
 
-    val webClient: WebClient,
+    val webClient: WebClient
 ) {
+    // This variable acts as our persistence in this example
+    private var _persistedRefreshToken: String? = null
+    private val refreshMutex = Mutex()
+
     @GetMapping("/truid/v1/confirm-signup")
     suspend fun confirmSignup(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ) {
         val session = exchange.session.awaitSingle()
+        // Clear data from previous runs
+        clearPersistence()
 
         val truidSignupUrl = URIBuilder(truidSignupEndpoint)
             .addParameter("response_type", "code")
@@ -88,11 +94,11 @@ class TruidSignupFlow(
             .addParameter("code_challenge_method", "S256")
             .build()
 
-        exchange.response.headers.add(LOCATION, truidSignupUrl.toString())
+        exchange.response.headers.add(HttpHeaders.LOCATION, truidSignupUrl.toString())
         if (xRequestedWith == "XMLHttpRequest") {
-            exchange.response.statusCode = ACCEPTED
+            exchange.response.statusCode = HttpStatus.ACCEPTED
         } else {
-            exchange.response.statusCode = FOUND
+            exchange.response.statusCode = HttpStatus.FOUND
         }
     }
 
@@ -101,7 +107,7 @@ class TruidSignupFlow(
         @RequestParam("code") code: String?,
         @RequestParam("state") state: String?,
         @RequestParam("error") error: String?,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ): Void? {
         val session = exchange.session.awaitSingle()
 
@@ -119,15 +125,33 @@ class TruidSignupFlow(
                 body.add("client_secret", clientSecret)
                 body.add("code_verifier", getOauth2CodeVerifier(session))
 
+                // Exchange code for access token and refresh token
                 val tokenResponse = webClient.post()
                     .uri(URIBuilder(truidTokenEndpoint).build())
-                    .contentType(APPLICATION_FORM_URLENCODED)
-                    .accept(APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .accept(MediaType.APPLICATION_JSON)
                     .body(fromFormData(body))
                     .retrieve()
-                    .awaitBody<Map<String, String>>()
+                    .awaitBody<TokenResponse>()
 
-                // TODO: Store tokenResponse["refresh_token"]
+                // Get and print user email from Truid
+                val getPresentationUri = URIBuilder(truidPresentationEndpoint)
+                    .addParameter("claims", "truid.app/claim/email/v1")
+                    .build()
+
+                val presentation = webClient
+                    .get()
+                    .uri(getPresentationUri)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${tokenResponse.accessToken}")
+                    .retrieve()
+                    .awaitBody<PresentationResponse>()
+
+                println(presentation)
+
+                // Persist token, so it can be accessed via GET "/truid/v1/presentation"
+                // See getAccessToken for an example of refreshing access token
+                persist(tokenResponse)
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
             }
@@ -136,33 +160,79 @@ class TruidSignupFlow(
         if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
             // Redirect to success page in the webapp flow
             exchange.response.headers.location = webSuccess
-            exchange.response.statusCode = FOUND
+            exchange.response.statusCode = HttpStatus.FOUND
             return null
         } else {
             // Return a 200 response in case of an AJAX request
-            exchange.response.statusCode = OK
+            exchange.response.statusCode = HttpStatus.OK
             return null
+        }
+    }
+
+    @GetMapping(
+        path = ["/truid/v1/presentation"],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    suspend fun getPresentation(): PresentationResponse {
+        val accessToken = refreshToken()
+
+        val getPresentationUri = URIBuilder(truidPresentationEndpoint)
+            .addParameter("claims", "truid.app/claim/email/v1")
+            .build()
+
+        return webClient
+            .get()
+            .uri(getPresentationUri)
+            .accept(MediaType.APPLICATION_JSON)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+            .retrieve()
+            .awaitBody()
+    }
+
+    private suspend fun refreshToken(): String {
+        // Synchronized, two refreshes with same refresh token
+        // invalidates all access tokens and refresh tokens in accordance to
+        // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
+        refreshMutex.withLock {
+            val refreshToken = getPersistedToken() ?: throw Forbidden("access_denied", "No refresh_token found")
+
+            val body = LinkedMultiValueMap<String, String>()
+            body.add("grant_type", "refresh_token")
+            body.add("refresh_token", refreshToken)
+            body.add("client_id", clientId)
+            body.add("client_secret", clientSecret)
+
+            val refreshedTokenResponse = webClient.post()
+                .uri(URIBuilder(truidTokenEndpoint).build())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(fromFormData(body))
+                .retrieve()
+                .awaitBody<TokenResponse>()
+
+            persist(refreshedTokenResponse)
+            return refreshedTokenResponse.accessToken
         }
     }
 
     @ExceptionHandler(Forbidden::class)
     fun handleForbidden(
         e: Forbidden,
-        exchange: ServerWebExchange,
+        exchange: ServerWebExchange
     ): Map<String, String>? {
         if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
             // Redirect to error page in the webapp flow
             exchange.response.headers.location =
                 URIBuilder(webFailure).addParameter("error", e.error).build()
-            exchange.response.statusCode = FOUND
+            exchange.response.statusCode = HttpStatus.FOUND
 
             return null
         } else {
             // Return a 403 response in case of an AJAX request
-            exchange.response.statusCode = FORBIDDEN
+            exchange.response.statusCode = HttpStatus.FORBIDDEN
 
             return mapOf(
-                "error" to e.error,
+                "error" to e.error
             )
         }
     }
@@ -194,5 +264,16 @@ class TruidSignupFlow(
 
     private fun getOauth2CodeVerifier(session: WebSession): String? {
         return session.attributes["oauth2-code-verifier"] as String?
+    }
+
+    private fun clearPersistence() {
+        _persistedRefreshToken = null
+    }
+
+    private fun persist(tokenResponse: TokenResponse) {
+        _persistedRefreshToken = tokenResponse.refreshToken
+    }
+    private fun getPersistedToken(): String? {
+        return _persistedRefreshToken
     }
 }
