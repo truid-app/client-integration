@@ -3,18 +3,18 @@ info:
   title: Demo Backend
   version: '1.0'
   description: |
-    Demo Backend Signup API
+    Demo Backend Login API
     
-    See https://developer.truid.app/#_user_registration_to_a_service
+    See https://developer.truid.app/#_user_login_to_a_service
 servers:
-  - url: https://example.truid.app/truid/v1/
+  - url: https://example.truid.app/
     description: example
 
 paths:
-  '/confirm-signup':
+  '/truid/v1/login-session':
     get:
       description: |
-        Create an URL to use towards the Truid API to start the Signup flow
+        Create an URL to use towards the Truid API to start the Login Session function
       parameters:
         - name: X-Requested-With
           description: |
@@ -29,10 +29,10 @@ paths:
         '302':
           description: |
             Returning an URL that the client should redirect to in order to
-            start a Truid Signup flow
+            start a Truid Login Session function
           headers:
             Location:
-              description: URL to redirect to for Truid Signup flow
+              description: URL to redirect to for Truid Login Session function
               schema:
                 type: string
         '202':
@@ -45,10 +45,10 @@ paths:
             A 202 response is to be treated exactly as a 302 response.
           headers:
             Location:
-              description: URL to redirect to for Truid Signup flow
+              description: URL to redirect to for Truid Login Session function
               schema:
                 type: string
-  '/complete-signup':
+  '/truid/v1/complete-login':
     get:
       description: |
         Complete the signup flow.
@@ -79,23 +79,34 @@ paths:
       responses:
         '200':
           description: |
-            The signup flow was successful
+            The Login Session was successful
         '403':
           description: |
             The signup flow failed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompleteSignupError'
+                $ref: '#/components/schemas/CompleteLoginSessionError'
+  '/api/perform-action':
+    post:
+      description: |
+        Example endpoint that requires that the user has an active login-session to be allowed to perform an action.
+      responses:
+        '200':
+          description: |
+            Current user is authenticated
+        '401':
+          description: |
+            User is not authenticated
 
 components:
   schemas:
-    CompleteSignupError:
+    CompleteLoginSessionError:
       type: object
       properties:
         error:
           type: string
-          enum: [invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorized_client, unsupported_grant_type]
+          enum: [invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorized_client, unsupported_grant_type, access_denied, authentication_required]
           description: |
             See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2.1
       required: [ error ]
