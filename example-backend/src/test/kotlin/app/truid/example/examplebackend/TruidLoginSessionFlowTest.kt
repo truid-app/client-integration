@@ -27,17 +27,17 @@ import java.net.HttpCookie
 @AutoConfigureWireMock(port = 0)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ActiveProfiles("test")
-class TruidSignupFlowTest {
+class TruidLoginSessionFlowTest {
 
     @Autowired
     lateinit var rest: TestRestTemplate
 
     @Nested
-    inner class ConfirmSignupEndpoint {
+    inner class LoginSessionEndpoint {
         @Test
         fun `It should redirect to Truid authorization endpoint`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -46,7 +46,7 @@ class TruidSignupFlowTest {
             val url = URIBuilder(res.location())
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
-            assertEquals("/oauth2/v1/authorize/confirm-signup", url.path)
+            assertEquals("/oauth2/v1/authorize/login-session", url.path)
             assertEquals("code", url.getParam("response_type"))
             assertEquals("test-client-id", url.getParam("client_id"))
             assertNotNull(url.getParam("scope"))
@@ -55,7 +55,7 @@ class TruidSignupFlowTest {
         @Test
         fun `It should not add client_secret to the returned URL`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -68,7 +68,7 @@ class TruidSignupFlowTest {
         @Test
         fun `It should add a state parameter to the returned URL`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -81,7 +81,7 @@ class TruidSignupFlowTest {
         @Test
         fun `It should use PKCE with S256`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -96,7 +96,7 @@ class TruidSignupFlowTest {
         @Test
         fun `It should use a 202 response for XMLHttpRequest clients`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .build(),
                 Void::class.java
@@ -106,13 +106,13 @@ class TruidSignupFlowTest {
             val url = URIBuilder(res.location())
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
-            assertEquals("/oauth2/v1/authorize/confirm-signup", url.path)
+            assertEquals("/oauth2/v1/authorize/login-session", url.path)
         }
 
         @Test
         fun `It should return a cookie containing the session ID`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -122,18 +122,18 @@ class TruidSignupFlowTest {
         }
 
         @Test
-        fun `Presentation should return a 403 if no tokens have been exchanged`() {
+        fun `User-info should return a 401 if no tokens have been exchanged`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/presentation")
+                RequestEntity.get("/api/user-info")
                     .build(),
                 Void::class.java
             )
-            assertEquals(403, res.statusCodeValue)
+            assertEquals(401, res.statusCodeValue)
         }
     }
 
     @Nested
-    inner class CompleteSignup {
+    inner class CompleteLogin {
         private lateinit var state: String
         private lateinit var cookie: HttpCookie
 
@@ -158,9 +158,9 @@ class TruidSignupFlowTest {
         }
 
         @BeforeEach
-        fun `Start signup`() {
+        fun `Start login`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -172,7 +172,7 @@ class TruidSignupFlowTest {
         }
 
         @Test
-        fun `Complete signup should return 200`() {
+        fun `Complete login should return 200`() {
             stubFor(
                 get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                     aResponse()
@@ -188,7 +188,7 @@ class TruidSignupFlowTest {
             )
 
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -199,7 +199,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Should return 403 on error authorization response`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?error=access_denied")
+                RequestEntity.get("/truid/v1/complete-login?error=access_denied")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -211,7 +211,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Should return 403 on mismatching state`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=wrong-state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=wrong-state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -223,7 +223,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Should return 403 on null state`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234")
+                RequestEntity.get("/truid/v1/complete-login?code=1234")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -249,7 +249,7 @@ class TruidSignupFlowTest {
             )
 
             val res1 = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -257,7 +257,7 @@ class TruidSignupFlowTest {
             assertEquals(200, res1.statusCodeValue)
 
             val res2 = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -269,7 +269,7 @@ class TruidSignupFlowTest {
         @Test
         fun `Should return 403 on unauthorized requests`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .build(),
                 Map::class.java
             )
@@ -293,7 +293,7 @@ class TruidSignupFlowTest {
             )
 
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .build(),
                 Map::class.java
@@ -301,10 +301,21 @@ class TruidSignupFlowTest {
             assertEquals(403, res.statusCodeValue)
             assertEquals("access_denied", res.body?.get("error"))
         }
+
+        @Test
+        fun `Should return 401 from perform-action endpoint without a login session`() {
+            val res = rest.exchange(
+                RequestEntity.post("/api/perform-action")
+                    .build(),
+                Map::class.java
+            )
+            assertEquals(401, res.statusCodeValue)
+            assertEquals("authentication_required", res.body?.get("error"))
+        }
     }
 
     @Nested
-    inner class CompleteSignupWebFlow {
+    inner class CompleteLoginWebFlow {
         private lateinit var state: String
         private lateinit var cookie: HttpCookie
 
@@ -329,9 +340,9 @@ class TruidSignupFlowTest {
         }
 
         @BeforeEach
-        fun `Start signup`() {
+        fun `Start login`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/confirm-signup")
+                RequestEntity.get("/truid/v1/login-session")
                     .build(),
                 Void::class.java
             )
@@ -343,7 +354,7 @@ class TruidSignupFlowTest {
         }
 
         @Test
-        fun `Complete signup should return 302`() {
+        fun `Complete login should return 302`() {
             stubFor(
                 get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                     aResponse()
@@ -359,7 +370,7 @@ class TruidSignupFlowTest {
             )
 
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .accept(MediaType.TEXT_HTML)
                     .build(),
@@ -367,13 +378,13 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/success.html", url.path)
+            assertEquals("/login/index.html", url.path)
         }
 
         @Test
         fun `Should return 302 with error on error authorization response`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?error=access_denied")
+                RequestEntity.get("/truid/v1/complete-login?error=access_denied")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .accept(MediaType.TEXT_HTML)
                     .build(),
@@ -381,14 +392,14 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/failure.html", url.path)
+            assertEquals("/login/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
         @Test
         fun `Should return 302 with error on mismatching state`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=wrong-state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=wrong-state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .accept(MediaType.TEXT_HTML)
                     .build(),
@@ -396,14 +407,14 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/failure.html", url.path)
+            assertEquals("/login/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
         @Test
         fun `Should return 302 with error on null state`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234")
+                RequestEntity.get("/truid/v1/complete-login?code=1234")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .accept(MediaType.TEXT_HTML)
                     .build(),
@@ -411,21 +422,21 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/failure.html", url.path)
+            assertEquals("/login/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
         @Test
         fun `Should return 302 with error on unauthorized requests`() {
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .accept(MediaType.TEXT_HTML)
                     .build(),
                 Void::class.java
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/failure.html", url.path)
+            assertEquals("/login/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -445,7 +456,7 @@ class TruidSignupFlowTest {
             )
 
             val res = rest.exchange(
-                RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                     .header(HttpHeaders.COOKIE, cookie.toString())
                     .accept(MediaType.TEXT_HTML)
                     .build(),
@@ -453,7 +464,7 @@ class TruidSignupFlowTest {
             )
             val url = URIBuilder(res.location())
             assertEquals(302, res.statusCodeValue)
-            assertEquals("/signup/failure.html", url.path)
+            assertEquals("/login/failure.html", url.path)
             assertEquals("access_denied", url.getParam("error"))
         }
 
@@ -461,7 +472,7 @@ class TruidSignupFlowTest {
         inner class WithPersistedTokens {
 
             @BeforeEach
-            fun `Complete signup`() {
+            fun `Complete login`() {
                 stubFor(
                     get("/exchange/v1/presentation?claims=truid.app%2Fclaim%2Femail%2Fv1").willReturn(
                         aResponse()
@@ -477,7 +488,7 @@ class TruidSignupFlowTest {
                 )
 
                 val res = rest.exchange(
-                    RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+                    RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                         .header(HttpHeaders.COOKIE, cookie.toString())
                         .accept(MediaType.TEXT_HTML)
                         .build(),
@@ -485,13 +496,13 @@ class TruidSignupFlowTest {
                 )
                 val url = URIBuilder(res.location())
                 assertEquals(302, res.statusCodeValue)
-                assertEquals("/signup/success.html", url.path)
+                assertEquals("/login/index.html", url.path)
             }
 
             @Test
-            fun `Should return presentation`() {
+            fun `Should return user-info`() {
                 val res = rest.exchange(
-                    RequestEntity.get("/truid/v1/presentation")
+                    RequestEntity.get("/api/user-info")
                         .header(HttpHeaders.COOKIE, cookie.toString())
                         .accept(MediaType.APPLICATION_JSON)
                         .build(),
@@ -499,6 +510,18 @@ class TruidSignupFlowTest {
                 )
                 assertEquals(200, res.statusCodeValue)
                 assertEquals("1234567abcdefg", res.body!!.sub)
+            }
+
+            @Test
+            fun `Should have access to perform-action endpoint`() {
+                val res = rest.exchange(
+                    RequestEntity.post("/api/perform-action")
+                        .header(HttpHeaders.COOKIE, cookie.toString())
+                        .accept(MediaType.APPLICATION_JSON)
+                        .build(),
+                    PresentationResponse::class.java
+                )
+                assertEquals(200, res.statusCodeValue)
             }
         }
     }
@@ -558,7 +581,7 @@ class TruidSignupFlowTest {
         )
 
         val res1 = rest.exchange(
-            RequestEntity.get("/truid/v1/confirm-signup")
+            RequestEntity.get("/truid/v1/login-session")
                 .build(),
             Void::class.java
         )
@@ -569,14 +592,14 @@ class TruidSignupFlowTest {
         val state = url.getParam("state")!!
 
         rest.exchange(
-            RequestEntity.get("/truid/v1/complete-signup?code=1234&state=$state")
+            RequestEntity.get("/truid/v1/complete-login?code=1234&state=$state")
                 .header(HttpHeaders.COOKIE, cookie.toString())
                 .build(),
             Map::class.java
         ).also { assertEquals(200, it.statusCodeValue) }
 
         rest.exchange(
-            RequestEntity.get("/truid/v1/presentation")
+            RequestEntity.get("/api/user-info")
                 .header(HttpHeaders.COOKIE, cookie.toString())
                 .accept(MediaType.APPLICATION_JSON)
                 .build(),
