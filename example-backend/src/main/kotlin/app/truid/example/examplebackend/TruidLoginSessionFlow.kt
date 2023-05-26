@@ -24,6 +24,9 @@ import org.springframework.web.server.WebSession
 import java.net.URI
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Base64
 
 private val sha256MessageDigest = MessageDigest.getInstance("SHA-256")
@@ -334,5 +337,19 @@ class TruidLoginFlow(
         if (userInfo != null) {
             session.attributes["user-info"] = userInfo
         }
+        println(
+            "User session ${if (userInfo != null) "created" else "refreshed"}, access-token expires: ${
+            toTimestampString(
+                session.attributes["oauth2-user-access-token-expires"] as Long
+            )
+            }"
+        )
+    }
+
+    private fun toTimestampString(timeMillis: Long): String? {
+        val date = Instant.ofEpochMilli(timeMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDateTime()
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
     }
 }
