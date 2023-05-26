@@ -51,7 +51,7 @@ paths:
   '/truid/v1/complete-login':
     get:
       description: |
-        Complete the signup flow.
+        Complete the Login Session flow.
         This is the endpoint that receives the OAuth2 authorization response.
         See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
       parameters:
@@ -82,7 +82,7 @@ paths:
             The Login Session was successful
         '403':
           description: |
-            The signup flow failed
+            The Login Session failed
           content:
             application/json:
               schema:
