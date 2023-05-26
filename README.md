@@ -124,7 +124,7 @@ It should be an address that ends with .local. (lets call this address `your_hos
 
 Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
 - Test Service: `true`
-- `redirect_uris`: `http://<your_hostname.local>:8080/truid/v1/complete-signup` `http://<your_hostname.local>:8080/truid/v1/complete-login` `truidtest://truid/v1/complete-signup` `truidtest://truid/v1/complete-login`
+- `redirect_uris`: `http://<your_hostname.local>:8080/truid/v1/complete-signup`, `http://<your_hostname.local>:8080/truid/v1/complete-login`, `truidtest://truid/v1/complete-signup`, `truidtest://truid/v1/complete-login`
 
 The first redirect uri is used in the browser based use case and the second one is used in the app to app use case. In a production environment there only need to one redirect uri on the format https://your.domain/path
 But because we are running localhost in this example code we had to split them up for ios.
