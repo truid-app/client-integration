@@ -70,8 +70,6 @@ class TruidLoginFlow(
 
     val webClient: WebClient
 ) {
-    // This variable acts as our persistence in this example
-    private var _persistedRefreshToken: String? = null
     private val refreshMutex = Mutex()
 
     @GetMapping("/truid/v1/login-session")
@@ -80,8 +78,8 @@ class TruidLoginFlow(
         exchange: ServerWebExchange
     ) {
         val session = exchange.session.awaitSingle()
-        // Clear data from previous runs
-        clearPersistence()
+        // Clear session from previous runs
+        clearUserSession(session)
 
         val truidLoginUrl = URIBuilder(truidLoginEndpoint)
             .addParameter("response_type", "code")
@@ -148,9 +146,8 @@ class TruidLoginFlow(
 
                 println(presentation)
 
-                // Persist token, so it can be accessed via GET "/truid/v1/login-presentation"
-                // See getAccessToken for an example of refreshing access token
-                persist(tokenResponse)
+                // Store tokens and user-info in session
+                // See getActiveUserAccessToken() for example how to validate and refreshing access token
                 updateUserSession(tokenResponse, session, presentation)
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
@@ -177,8 +174,8 @@ class TruidLoginFlow(
         exchange: ServerWebExchange
     ): PresentationResponse? {
         val session = exchange.session.awaitSingle()
-        // Make sure we have a valid access token
-        getActiveUserAccessToken(session)
+        // Make sure user is authenticated
+        validateUserSession(session)
         // Return user-info from web-session
         return session.attributes["user-info"] as PresentationResponse?
     }
@@ -190,26 +187,14 @@ class TruidLoginFlow(
     ) {
         // Example (dummy) action endpoint that requires the user to be authenticated.
         val session = exchange.session.awaitSingle()
-        val token = session.attributes["oauth2-user-access-token"] as String?
-        val tokenExpires = session.attributes["oauth2-user-access-token-expires"] as Long?
 
-        if (token == null || tokenExpires == null) {
-            throw Unauthorized("authentication_required", "No active Login session")
-        }
+        // Make sure user is authenticated
+        validateUserSession(session)
 
-        if (System.currentTimeMillis() > tokenExpires) {
-            // Access token has expired, try to refresh
-            try {
-                refreshToken(session)
-            } catch (forbidden: Forbidden) {
-                session.attributes.remove("oauth2-user-access-token")
-                session.attributes.remove("oauth2-user-access-token-expires")
-                throw Unauthorized("authentication_required", "Refresh token expired or revoked")
-            }
-        }
+        // Make some action on behalf of the user
     }
 
-    private suspend fun getActiveUserAccessToken(session: WebSession): String {
+    private suspend fun validateUserSession(session: WebSession) {
         val token = session.attributes["oauth2-user-access-token"] as String?
         val tokenExpires = session.attributes["oauth2-user-access-token-expires"] as Long?
 
@@ -218,11 +203,8 @@ class TruidLoginFlow(
         }
 
         if (System.currentTimeMillis() > tokenExpires) {
-            val tokenResponse = refreshToken(session)
-            return tokenResponse.accessToken
+            refreshToken(session)
         }
-
-        return token
     }
 
     private suspend fun refreshToken(session: WebSession): TokenResponse {
@@ -230,7 +212,7 @@ class TruidLoginFlow(
         // invalidates all access tokens and refresh tokens in accordance to
         // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
         refreshMutex.withLock {
-            val refreshToken = getPersistedToken() ?: throw Forbidden("access_denied", "No refresh_token found")
+            val refreshToken = getRefreshToken(session) ?: throw Forbidden("access_denied", "No refresh_token found")
 
             val body = LinkedMultiValueMap<String, String>()
             body.add("grant_type", "refresh_token")
@@ -246,7 +228,6 @@ class TruidLoginFlow(
                 .retrieve()
                 .awaitBody<TokenResponse>()
 
-            persist(refreshedTokenResponse)
             updateUserSession(refreshedTokenResponse, session)
             return refreshedTokenResponse
         }
@@ -325,16 +306,15 @@ class TruidLoginFlow(
         return session.attributes["oauth2-code-verifier"] as String?
     }
 
-    private fun clearPersistence() {
-        _persistedRefreshToken = null
+    private fun clearUserSession(session: WebSession) {
+        session.attributes.remove("oauth2-user-access-token")
+        session.attributes.remove("oauth2-user-access-token-expires")
+        session.attributes.remove("oauth2-user-refresh-token")
+        session.attributes.remove("user-info")
     }
 
-    private fun persist(tokenResponse: TokenResponse) {
-        _persistedRefreshToken = tokenResponse.refreshToken
-    }
-
-    private fun getPersistedToken(): String? {
-        return _persistedRefreshToken
+    private fun getRefreshToken(session: WebSession): String? {
+        return session.attributes["oauth2-user-refresh-token"] as String?
     }
 
     private fun updateUserSession(
@@ -350,6 +330,7 @@ class TruidLoginFlow(
         session.attributes["oauth2-user-access-token"] = tokenResponse.accessToken
         session.attributes["oauth2-user-access-token-expires"] =
             System.currentTimeMillis() + (tokenResponse.expiresIn * 1000)
+        session.attributes["oauth2-user-refresh-token"] = tokenResponse.refreshToken
         if (userInfo != null) {
             session.attributes["user-info"] = userInfo
         }
