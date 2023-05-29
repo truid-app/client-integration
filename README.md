@@ -145,11 +145,13 @@ Prerequisites:
 Start the backend:
 If you want to test web client:
 ```bash
-$ export TRUID_REDIRECT_URI=http://<your_hostname.local>:8080/truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-login
 ```
 If you want to test app to app:
 ```bash
-$ export TRUID_REDIRECT_URI=truidtest://truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-login
 ```
 In a production environment, where we can use a registered domain, the redirect uri can be the same in both cases.  
 
