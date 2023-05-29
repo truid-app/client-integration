@@ -46,7 +46,7 @@ private fun random(n: Int): ByteArray {
 }
 
 @RestController
-class TruidLoginFlow(
+class TruidLoginSessionFlow(
     @Value("\${oauth2.clientId}")
     val clientId: String,
 
@@ -241,6 +241,7 @@ class TruidLoginFlow(
         e: Forbidden,
         exchange: ServerWebExchange
     ): Map<String, String>? {
+        println("Handle forbidden: ${e.error}: ${e.message}")
         if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
             // Redirect to error page in the webapp flow
             exchange.response.headers.location =

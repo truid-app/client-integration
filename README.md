@@ -95,6 +95,11 @@ Give emulator/phone access to host localhost:8080 where example-backend is runni
 $ adb reverse tcp:8080 tcp:8080
 ```
 
+Install dependencies:
+```bash
+$ yarn install
+```
+
 Start the example app
 
 Look in example-app/.env and ensure it correct:
@@ -146,14 +151,14 @@ Start the backend:
 If you want to test web client:
 ```bash
 $ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-signup
-$ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-login
+$ export TRUID_REDIRECT_URI_LOGIN=http://<your_hostname.local>:8080/truid/v1/complete-login
 ```
 If you want to test app to app:
 ```bash
 $ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-signup
-$ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-login
+$ export TRUID_REDIRECT_URI_LOGIN=truidtest://truid/v1/complete-login
 ```
-In a production environment, where we can use a registered domain, the redirect uri can be the same in both cases.  
+In a production environment, where we can use a registered domain, the redirect uri can be the same in both cases.
 
 ```bash
 $ export TRUID_CLIENT_ID=...
@@ -167,10 +172,6 @@ $ docker-compose up
 Point your mac/windows browser to `http://<your_hostname.local>:8080/index.html`.
 
 Select either `Onboarding session` or `Login session`.
-
-_Note:_
-
-The QR flow for remote login is not yet fully implemented, and will return access denied.
 
 ### Try the web client on same device
 
