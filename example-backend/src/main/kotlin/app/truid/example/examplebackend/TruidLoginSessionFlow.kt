@@ -46,7 +46,7 @@ private fun random(n: Int): ByteArray {
 }
 
 @RestController
-class TruidLoginFlow(
+class TruidLoginSessionFlow(
     @Value("\${oauth2.clientId}")
     val clientId: String,
 

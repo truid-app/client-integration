@@ -95,6 +95,11 @@ Give emulator/phone access to host localhost:8080 where example-backend is runni
 $ adb reverse tcp:8080 tcp:8080
 ```
 
+Install dependencies:
+```bash
+$ yarn install
+```
+
 Start the example app
 
 Look in example-app/.env and ensure it correct:
@@ -167,10 +172,6 @@ $ docker-compose up
 Point your mac/windows browser to `http://<your_hostname.local>:8080/index.html`.
 
 Select either `Onboarding session` or `Login session`.
-
-_Note:_
-
-The QR flow for remote login is not yet fully implemented, and will return access denied.
 
 ### Try the web client on same device
 
