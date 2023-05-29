@@ -35,7 +35,7 @@ $ docker build . -t example-web
 
 Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
 - Test Service: `true`
-- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`
+- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`, `http://localhost:8080/truid/v1/complete-login`
 
 _Note:_
 
@@ -61,9 +61,7 @@ $ docker-compose up
 
 Point your mac/windows browser to `http://localhost:8080/index.html`.
 
-_Note:_
-
-The QR flow for remote login is not yet fully implemented, and will return access denied.
+Select either `Onboarding session` or `Login session`
 
 ### Try the web client on same device
 
@@ -76,6 +74,8 @@ $ adb reverse tcp:8080 tcp:8080
 ```
 
 On the phone, point the browser to `http://localhost:8080/index.html`
+
+Select either `Onboarding session` or `Login session`
 
 ### Try the App to App Flow
 
@@ -124,7 +124,7 @@ It should be an address that ends with .local. (lets call this address `your_hos
 
 Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
 - Test Service: `true`
-- `redirect_uris`: `http://<your_hostname.local>:8080/truid/v1/complete-signup`, `truidtest://truid/v1/complete-signup`
+- `redirect_uris`: `http://<your_hostname.local>:8080/truid/v1/complete-signup`, `http://<your_hostname.local>:8080/truid/v1/complete-login`, `truidtest://truid/v1/complete-signup`, `truidtest://truid/v1/complete-login`
 
 The first redirect uri is used in the browser based use case and the second one is used in the app to app use case. In a production environment there only need to one redirect uri on the format https://your.domain/path
 But because we are running localhost in this example code we had to split them up for ios.
@@ -145,11 +145,13 @@ Prerequisites:
 Start the backend:
 If you want to test web client:
 ```bash
-$ export TRUID_REDIRECT_URI=http://<your_hostname.local>:8080/truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=http://<your_hostname.local>:8080/truid/v1/complete-login
 ```
 If you want to test app to app:
 ```bash
-$ export TRUID_REDIRECT_URI=truidtest://truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-signup
+$ export TRUID_REDIRECT_URI_SIGNUP=truidtest://truid/v1/complete-login
 ```
 In a production environment, where we can use a registered domain, the redirect uri can be the same in both cases.  
 
@@ -164,6 +166,8 @@ $ docker-compose up
 
 Point your mac/windows browser to `http://<your_hostname.local>:8080/index.html`.
 
+Select either `Onboarding session` or `Login session`.
+
 _Note:_
 
 The QR flow for remote login is not yet fully implemented, and will return access denied.
@@ -173,6 +177,8 @@ The QR flow for remote login is not yet fully implemented, and will return acces
 Connect the iPhone using USB
 
 On the phone, point the browser to `http://<your_hostname.local>:8080/index.html`
+
+Select either `Onboarding session` or `Login session`.
 
 ### Try the App to App Flow
 Prerequisites:

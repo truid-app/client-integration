@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Example Web - Login</title>
+    <script>
+
+      async function fetchUserInfo(){
+        // Simple login session state logic. 
+        // Fetches user-info on page load and presents login button if backend returns 401.
+
+        const response = await fetch("/api/user-info");
+        if (response.ok) {          
+          const jsonData = await response.json();
+          console.log("User", jsonData);
+          
+          // Show user data
+          const elem = document.getElementById("user-info");
+          elem.innerHTML = jsonData.sub;
+          
+          // Hide login button
+          const loginButton = document.getElementById("btn-login");
+          loginButton.remove();
+
+        } else if( response.status === 401 ) {          
+          // Hide user data
+          const elem = document.getElementById("user-info");
+          elem.innerHTML = "";
+          
+        } else {
+          console.log("Failure", response.status);
+        }
+      }
+
+      window.onload=fetchUserInfo;
+    </script>
+  </head>
+  <body>    
+    <h1>Example login app</h1>
+    <form id="btn-login" action="/truid/v1/login-session">
+      <button type="submit">Log in with Truid</i></button>
+    </form>    
+    <p>
+      Logged in as: <span id="user-info"></span>
+    </p>
+  </body>
+</html>
