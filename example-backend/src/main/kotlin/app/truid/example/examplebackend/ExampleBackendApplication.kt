@@ -33,12 +33,7 @@ class ExampleBackendApplication {
 
     @Bean
     fun webClient(): WebClient {
-        return WebClient
-            .builder()
-            // create a new connection for each request to avoid connection reset by peer when docker compose container
-            // is restarted
-            .clientConnector(ReactorClientHttpConnector(HttpClient.from(TcpClient.newConnection())))
-            .build()
+        return WebClient.create()
     }
 }
 

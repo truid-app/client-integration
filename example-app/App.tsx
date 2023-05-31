@@ -33,7 +33,7 @@ async function resolveAuthorizeUrl(startUrl: string): Promise<string> {
     // redirect: 'manual' does not work, this request will follow redirects
   }).catch((e: any) => {
     console.log(`HTTP exception ${startUrl} ${e.message}`);
-    throw new Error(e);
+    throw e;
   });
 
   console.log(`HTTP ${res.status} ${startUrl}`);
@@ -145,15 +145,8 @@ const App = () => {
     let deeplinkUrl = new URL(url, true);
     console.log('url', deeplinkUrl);
 
-    let path = deeplinkUrl.pathname;
-    if( deeplinkUrl.protocol !== "http:" ){
-      // custom protocol like truidtest://
-      // then the first part of pathname is parsed as host
-      path = `/${deeplinkUrl.hostname}${path}`
-    }
-
     try {
-      const response = await processCode(`${TRUID_EXAMPLE_DOMAIN}${path}?${url.split('?')[1]}`);
+      const response = await processCode(`${TRUID_EXAMPLE_DOMAIN}${deeplinkUrl.pathname}?${url.split('?')[1]}`);
       if( response ){
         return {success: true};
       } else {
