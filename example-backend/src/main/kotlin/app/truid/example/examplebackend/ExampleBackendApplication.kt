@@ -4,12 +4,9 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
-import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.server.session.CookieWebSessionIdResolver
 import org.springframework.web.server.session.WebSessionIdResolver
-import reactor.netty.http.client.HttpClient
-import reactor.netty.tcp.TcpClient
 import java.net.URL
 
 @SpringBootApplication
