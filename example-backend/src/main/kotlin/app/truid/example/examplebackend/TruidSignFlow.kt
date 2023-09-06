@@ -34,7 +34,7 @@ class TruidSignFlow(
     val clientSecret: String,
 
     @Value("\${oauth2.truid.sign-endpoint}")
-    val truidSignupEndpoint: String,
+    val truidSignEndpoint: String,
 
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
@@ -66,7 +66,7 @@ class TruidSignFlow(
         val session = exchange.session.awaitSingle()
         val document = getDocument()
 
-        val truidSignupUrl = URIBuilder(truidSignupEndpoint)
+        val truidSignupUrl = URIBuilder(truidSignEndpoint)
             .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
             .addParameter("scope", "truid.app/data-point/email")
