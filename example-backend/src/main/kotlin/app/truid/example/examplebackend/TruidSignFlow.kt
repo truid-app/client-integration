@@ -1,18 +1,16 @@
 package app.truid.example.examplebackend
 
 import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpStatus.ACCEPTED
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.FOUND
 import org.springframework.http.HttpStatus.OK
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
-import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.http.MediaType.APPLICATION_PDF_VALUE
 import org.springframework.http.MediaType.TEXT_HTML
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -28,54 +26,63 @@ import org.springframework.web.server.ServerWebExchange
 import java.net.URI
 
 @RestController
-class TruidSignupFlow(
+class TruidSignFlow(
     @Value("\${oauth2.clientId}")
     val clientId: String,
 
     @Value("\${oauth2.clientSecret}")
     val clientSecret: String,
 
-    @Value("\${oauth2.redirectUri.signup}")
-    val redirectUri: String,
-
-    @Value("\${oauth2.truid.signup-endpoint}")
+    @Value("\${oauth2.truid.sign-endpoint}")
     val truidSignupEndpoint: String,
 
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
 
-    @Value("\${oauth2.truid.presentation-endpoint}")
-    val truidPresentationEndpoint: String,
+    @Value("\${oauth2.truid.signature-endpoint}")
+    val truidSignatureEndpoint: String,
 
-    @Value("\${web.signup.success}")
+    @Value("\${app.domain}")
+    val publicDomain: String,
+
+    @Value("\${web.sign.success}")
     val webSuccess: URI,
 
-    @Value("\${web.signup.failure}")
+    @Value("\${web.sign.failure}")
     val webFailure: URI,
 
     val webClient: WebClient
 ) {
-    // This variable acts as our persistence in this example
-    private var _persistedRefreshToken: String? = null
-    private val refreshMutex = Mutex()
+    @GetMapping("/documents/Agreement.pdf", produces = [APPLICATION_PDF_VALUE])
+    suspend fun document(): ByteArray {
+        return getDocument()
+    }
 
-    @GetMapping("/truid/v1/confirm-signup")
-    suspend fun confirmSignup(
+    @GetMapping("/truid/v1/sign")
+    suspend fun sign(
         @RequestHeader("X-Requested-With") xRequestedWith: String?,
         exchange: ServerWebExchange
     ) {
         val session = exchange.session.awaitSingle()
-        // Clear data from previous runs
-        clearPersistence()
+        val document = getDocument()
 
         val truidSignupUrl = URIBuilder(truidSignupEndpoint)
             .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
             .addParameter("scope", "truid.app/data-point/email")
-            .addParameter("redirect_uri", redirectUri)
+            .addParameter("redirect_uri", "$publicDomain/truid/v1/complete-sign")
             .addParameter("state", createOauth2State(session))
             .addParameter("code_challenge", createOauth2CodeChallenge(session))
             .addParameter("code_challenge_method", "S256")
+            .addParameter("user_message", "Please sign this document")
+            .addParameter("data_object_id", "$publicDomain/documents/Agreement.pdf")
+            .addParameter("data_object_digest", base64url(sha256(document)))
+            .addParameter("data_object_digest_algorithm", "S256")
+            .addParameter("data_object_b64", "false")
+            .addParameter("data_object_content_type", "application/pdf")
+            .addParameter("signature_profile", "aes_jades_baseline_b-b")
+            .addParameter("jws_packaging", "detached")
+            .addParameter("jws_serialization", "compact")
             .build()
 
         exchange.response.headers.location = truidSignupUrl
@@ -86,8 +93,8 @@ class TruidSignupFlow(
         }
     }
 
-    @GetMapping("/truid/v1/complete-signup")
-    suspend fun completeSignup(
+    @GetMapping("/truid/v1/complete-sign")
+    suspend fun completeSign(
         @RequestParam("code") code: String?,
         @RequestParam("state") state: String?,
         @RequestParam("error") error: String?,
@@ -104,7 +111,7 @@ class TruidSignupFlow(
                 val body = LinkedMultiValueMap<String, String>()
                 body.add("grant_type", "authorization_code")
                 body.add("code", code)
-                body.add("redirect_uri", redirectUri)
+                body.add("redirect_uri", "$publicDomain/truid/v1/complete-sign")
                 body.add("client_id", clientId)
                 body.add("client_secret", clientSecret)
                 body.add("code_verifier", getOauth2CodeVerifier(session))
@@ -119,25 +126,19 @@ class TruidSignupFlow(
                     .retrieve()
                     .awaitBody<TokenResponse>()
 
-                println("Fetching presentation: $truidPresentationEndpoint")
-                // Get and print user email from Truid
-                val getPresentationUri = URIBuilder(truidPresentationEndpoint)
-                    .addParameter("claims", "truid.app/claim/email/v1")
-                    .build()
-
-                val presentation = webClient
+                println("Fetching signature: $truidSignatureEndpoint")
+                // Get signature
+                val signature = webClient
                     .get()
-                    .uri(getPresentationUri)
-                    .accept(APPLICATION_JSON)
+                    .uri(truidSignatureEndpoint)
+                    .accept(MediaType("application", "jose"))
                     .headers { it.setBearerAuth(tokenResponse.accessToken) }
                     .retrieve()
-                    .awaitBody<PresentationResponse>()
+                    .awaitBody<String>()
 
-                println(presentation)
+                println(signature)
 
-                // Persist token, so it can be accessed via GET "/truid/v1/presentation"
-                // See getAccessToken for an example of refreshing access token
-                persist(tokenResponse)
+                // TODO: verify signature
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
             }
@@ -152,52 +153,6 @@ class TruidSignupFlow(
             // Return a 200 response in case of an AJAX request
             exchange.response.statusCode = OK
             return null
-        }
-    }
-
-    @GetMapping(
-        path = ["/truid/v1/presentation"],
-        produces = [APPLICATION_JSON_VALUE]
-    )
-    suspend fun getPresentation(): PresentationResponse {
-        val accessToken = refreshToken()
-
-        val getPresentationUri = URIBuilder(truidPresentationEndpoint)
-            .addParameter("claims", "truid.app/claim/email/v1")
-            .build()
-
-        return webClient
-            .get()
-            .uri(getPresentationUri)
-            .accept(APPLICATION_JSON)
-            .header(AUTHORIZATION, "Bearer $accessToken")
-            .retrieve()
-            .awaitBody()
-    }
-
-    private suspend fun refreshToken(): String {
-        // Synchronized, two refreshes with same refresh token
-        // invalidates all access tokens and refresh tokens in accordance to
-        // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics-15#section-4.12.2
-        refreshMutex.withLock {
-            val refreshToken = getPersistedToken() ?: throw Forbidden("access_denied", "No refresh_token found")
-
-            val body = LinkedMultiValueMap<String, String>()
-            body.add("grant_type", "refresh_token")
-            body.add("refresh_token", refreshToken)
-            body.add("client_id", clientId)
-            body.add("client_secret", clientSecret)
-
-            val refreshedTokenResponse = webClient.post()
-                .uri(URIBuilder(truidTokenEndpoint).build())
-                .contentType(APPLICATION_FORM_URLENCODED)
-                .accept(APPLICATION_JSON)
-                .body(fromFormData(body))
-                .retrieve()
-                .awaitBody<TokenResponse>()
-
-            persist(refreshedTokenResponse)
-            return refreshedTokenResponse.accessToken
         }
     }
 
@@ -223,14 +178,12 @@ class TruidSignupFlow(
         }
     }
 
-    private fun clearPersistence() {
-        _persistedRefreshToken = null
-    }
-
-    private fun persist(tokenResponse: TokenResponse) {
-        _persistedRefreshToken = tokenResponse.refreshToken
-    }
-    private fun getPersistedToken(): String? {
-        return _persistedRefreshToken
+    private fun getDocument(): ByteArray {
+        val document = javaClass.getResourceAsStream("/documents/Agreement.pdf")
+        if (document == null) {
+            throw RuntimeException("document not found")
+        } else {
+            return document.readAllBytes()
+        }
     }
 }

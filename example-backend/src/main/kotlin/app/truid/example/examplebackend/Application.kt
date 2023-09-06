@@ -10,7 +10,7 @@ import org.springframework.web.server.session.WebSessionIdResolver
 import java.net.URL
 
 @SpringBootApplication
-class ExampleBackendApplication {
+class Application {
     @Bean
     fun webSessionIdResolver(
         @Value("\${app.domain}")
@@ -35,5 +35,5 @@ class ExampleBackendApplication {
 }
 
 fun main(args: Array<String>) {
-    runApplication<ExampleBackendApplication>(*args)
+    runApplication<Application>(*args)
 }

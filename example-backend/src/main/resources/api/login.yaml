@@ -57,7 +57,7 @@ paths:
       parameters:
         - name: code
           description: |
-            Code delivered in the authoization response.
+            Code delivered in the authorization response.
             See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
           in: query
           schema:

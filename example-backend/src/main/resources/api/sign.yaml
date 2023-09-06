@@ -3,55 +3,44 @@ info:
   title: Demo Backend
   version: '1.0'
   description: |
-    Demo Backend Signup API
+    Demo Backend Sign API
     
-    See https://developer.truid.app/#_user_registration_to_a_service
+    See https://developer.truid.app/#_user_signing_a_document
 servers:
   - url: https://example.truid.app/truid/v1/
     description: example
 
 paths:
-  '/confirm-signup':
+  '/documents/Application.pdf':
     get:
       description: |
-        Create an URL to use towards the Truid API to start the Signup flow
-      parameters:
-        - name: X-Requested-With
+        Simple endpoint to fetch the example document that should be signed
+      responses:
+        '200':
           description: |
-            This header should be set if the client cannot handle manual redirect
-            on 302 responses, and would rather want a 202 response.
-          in: header
-          required: false
-          schema:
-            type: string
-            enum: [XMLHttpRequest]
+            An example PDF document that should be signed
+          content:
+            application/pdf:
+              schema:
+                type: file
+  '/sign':
+    get:
+      description: |
+        Create an URL to use towards the Truid API to start the Sign flow
       responses:
         '302':
           description: |
             Returning an URL that the client should redirect to in order to
-            start a Truid Signup flow
+            start a Truid Sign flow
           headers:
             Location:
-              description: URL to redirect to for Truid Signup flow
+              description: URL to redirect to for Truid Sign flow
               schema:
                 type: string
-        '202':
-          description: |
-            A 202 response is returned instead of a 302 response if the client
-            is passing the header `X-Requested-With: XMLHttpRequest`. This is
-            used because some clients cannot handle manual redirect on 302
-            responses.
-            
-            A 202 response is to be treated exactly as a 302 response.
-          headers:
-            Location:
-              description: URL to redirect to for Truid Signup flow
-              schema:
-                type: string
-  '/complete-signup':
+  '/complete-sign':
     get:
       description: |
-        Complete the signup flow.
+        Complete the sign flow.
         This is the endpoint that receives the OAuth2 authorization response.
         See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
       parameters:
@@ -79,23 +68,23 @@ paths:
       responses:
         '200':
           description: |
-            The signup flow was successful
+            The sign flow was successful
         '403':
           description: |
-            The signup flow failed
+            The sign flow failed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompleteSignupError'
+                $ref: '#/components/schemas/CompleteSignError'
 
 components:
   schemas:
-    CompleteSignupError:
+    CompleteSignError:
       type: object
       properties:
         error:
           type: string
-          enum: [invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorized_client, unsupported_grant_type]
+          enum: [invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorized_client, unsupported_grant_type, invalid_signature]
           description: |
             See https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2.1
       required: [ error ]
