@@ -87,8 +87,10 @@ class TruidSignFlow(
 
         exchange.response.headers.location = truidSignupUrl
         if (xRequestedWith == "XMLHttpRequest") {
+            // Return a 202 response in case of an AJAX request
             exchange.response.statusCode = ACCEPTED
         } else {
+            // Return a 302 response in case of browser redirect
             exchange.response.statusCode = FOUND
         }
     }
