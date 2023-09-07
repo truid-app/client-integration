@@ -4,13 +4,23 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
+import org.springframework.data.auditing.DateTimeProvider
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.server.session.CookieWebSessionIdResolver
 import org.springframework.web.server.session.WebSessionIdResolver
 import java.net.URL
+import java.time.Clock
+import java.time.Instant
+import java.util.Optional
 
 @SpringBootApplication
 class Application {
+    @Bean
+    fun clock(): DateTimeProvider {
+        val clock = Clock.systemUTC()
+        return DateTimeProvider { Optional.of(Instant.now(clock)) }
+    }
+
     @Bean
     fun webSessionIdResolver(
         @Value("\${app.domain}")

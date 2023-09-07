@@ -20,9 +20,7 @@ paths:
           description: |
             An example PDF document that should be signed
           content:
-            application/pdf:
-              schema:
-                type: file
+            application/pdf: {}
   '/sign':
     get:
       description: |

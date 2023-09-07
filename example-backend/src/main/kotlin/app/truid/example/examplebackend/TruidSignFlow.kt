@@ -1,8 +1,13 @@
 package app.truid.example.examplebackend
 
+import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.util.Base64
+import com.nimbusds.jwt.JWTParser
+import com.nimbusds.jwt.SignedJWT
 import kotlinx.coroutines.reactor.awaitSingle
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.auditing.DateTimeProvider
 import org.springframework.http.HttpStatus.ACCEPTED
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.http.HttpStatus.FOUND
@@ -24,6 +29,18 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.server.ServerWebExchange
 import java.net.URI
+import java.security.GeneralSecurityException
+import java.security.cert.CertPathValidator
+import java.security.cert.CertificateFactory
+import java.security.cert.PKIXParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
+import java.security.interfaces.ECPublicKey
+import java.time.Duration
+import java.time.Instant
+import java.util.Date
+
+class InvalidSignature(msg: String, cause: Throwable? = null) : Forbidden("invalid_signature", msg, cause)
 
 @RestController
 class TruidSignFlow(
@@ -51,8 +68,15 @@ class TruidSignFlow(
     @Value("\${web.sign.failure}")
     val webFailure: URI,
 
+    @Value("\${trustanchor.truid}")
+    val trustAnchors: List<String>,
+
+    val clock: DateTimeProvider,
+
     val webClient: WebClient
 ) {
+    private val FACTORY = CertificateFactory.getInstance("X509")
+
     @GetMapping("/documents/Agreement.pdf", produces = [APPLICATION_PDF_VALUE])
     suspend fun document(): ByteArray {
         return getDocument()
@@ -138,9 +162,9 @@ class TruidSignFlow(
                     .retrieve()
                     .awaitBody<String>()
 
-                println(signature)
+                println("Signature: $signature")
 
-                // TODO: verify signature
+                verifySignature(signature, getDocument())
             } catch (e: WebClientResponseException.Forbidden) {
                 throw Forbidden("access_denied", e.message)
             }
@@ -163,6 +187,9 @@ class TruidSignFlow(
         e: Forbidden,
         exchange: ServerWebExchange
     ): Map<String, String>? {
+        println("Caught an exception: $e")
+        e.printStackTrace()
+
         if (exchange.request.headers.accept.contains(TEXT_HTML)) {
             // Redirect to error page in the webapp flow
             exchange.response.headers.location =
@@ -187,5 +214,96 @@ class TruidSignFlow(
         } else {
             return document.readAllBytes()
         }
+    }
+
+    private fun truidTrustAnchors(): Set<TrustAnchor> {
+        return trustAnchors.map {
+            TrustAnchor(
+                FACTORY.generateCertificate(
+                    Base64.from(
+                        it.replace("(\n)?-----(BEGIN|END) CERTIFICATE-----(\n)?".toRegex(), "")
+                    ).decode().inputStream()
+                ) as X509Certificate,
+                null
+            )
+        }.toSet()
+    }
+
+    private fun decodeCertificateChain(x509CertChain: List<Base64>): List<X509Certificate> {
+        return x509CertChain.map {
+            FACTORY.generateCertificate(it.decode().inputStream()) as X509Certificate
+        }
+    }
+
+    fun validateCertificateChain(chain: List<X509Certificate>, trustAnchors: Set<TrustAnchor>, verifyAt: Date) {
+        val validator = CertPathValidator.getInstance("PKIX")
+
+        try {
+            val params = PKIXParameters(trustAnchors)
+            params.isRevocationEnabled = false // TBD: CRL not published yet
+            params.date = verifyAt
+            validator.validate(FACTORY.generateCertPath(chain), params)
+        } catch (e: GeneralSecurityException) {
+            throw InvalidSignature("Invalid certificate chain", e)
+        }
+    }
+
+    private fun verifySignature(jws: String, payload: ByteArray) {
+        val now = Instant.from(clock.now.get())
+        val jwt = JWTParser.parse(jws)
+        println("jwt.header: ${jwt.header}")
+
+        if (jwt is SignedJWT) {
+            val x509CertChain = decodeCertificateChain(jwt.header.x509CertChain)
+            println("certificates: $x509CertChain")
+
+            validateCertificateChain(x509CertChain, truidTrustAnchors(), Date.from(now))
+
+            val publicKey = x509CertChain[0].publicKey
+            if (publicKey !is ECPublicKey) {
+                throw InvalidSignature("Expected EC key")
+            }
+
+            if (!jwt.verify(ECDSAVerifier(publicKey, setOf("sigD", "sigT")))) {
+                throw InvalidSignature("Invalid signature")
+            }
+
+            val sigD = jwt.header.getCustomParam("sigD") as Map<*, *>
+
+            val mId = sigD["mId"] as String
+            if (mId != "http://uri.etsi.org/19182/ObjectIdByURIHash") {
+                throw InvalidSignature("mId does not match")
+            }
+            val pars = sigD["pars"] as List<*>
+            if (pars[0] != "$publicDomain/documents/Agreement.pdf") {
+                throw InvalidSignature("pars does not match")
+            }
+            val hashM = sigD["hashM"]
+            if (hashM != "S256") {
+                throw InvalidSignature("hashM does not match")
+            }
+            val hashV = sigD["hashV"] as List<*>
+            if (hashV[0] != base64url(sha256(payload))) {
+                throw InvalidSignature("Payload digest does not match")
+            }
+            val userMessage = jwt.header.getCustomParam("truid.app/user_message/v1") as String
+            if (userMessage != "Please sign this document") {
+                throw InvalidSignature("User message does not match")
+            }
+
+            val sigT = parseSigT(jwt.header.getCustomParam("sigT"))
+            if (sigT > now) {
+                throw InvalidSignature("sigT is in the future")
+            }
+            if (sigT < now - Duration.ofHours(1)) {
+                throw InvalidSignature("sigT is in the past")
+            }
+        } else {
+            throw InvalidSignature("JWS signature is not signed")
+        }
+    }
+
+    private fun parseSigT(value: Any): Instant {
+        return Instant.parse(value as String)
     }
 }
