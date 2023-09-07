@@ -5,9 +5,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.apache.http.client.utils.URIBuilder
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
+import org.springframework.http.HttpStatus.ACCEPTED
+import org.springframework.http.HttpStatus.FORBIDDEN
+import org.springframework.http.HttpStatus.FOUND
+import org.springframework.http.HttpStatus.OK
+import org.springframework.http.HttpStatus.UNAUTHORIZED
+import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.http.MediaType.TEXT_HTML
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,28 +28,9 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebSession
 import java.net.URI
-import java.security.MessageDigest
-import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Base64
-
-private val sha256MessageDigest = MessageDigest.getInstance("SHA-256")
-private val base64 = Base64.getUrlEncoder().withoutPadding()
-private val secureRandom = SecureRandom()
-
-private fun sha256(value: String): ByteArray =
-    sha256MessageDigest.digest(value.toByteArray())
-
-private fun base64url(value: ByteArray): String =
-    base64.encodeToString(value)
-
-private fun random(n: Int): ByteArray {
-    val result = ByteArray(n)
-    secureRandom.nextBytes(result)
-    return result
-}
 
 @RestController
 class TruidLoginSessionFlow(
@@ -94,11 +81,13 @@ class TruidLoginSessionFlow(
             .addParameter("code_challenge_method", "S256")
             .build()
 
-        exchange.response.headers.add(HttpHeaders.LOCATION, truidLoginUrl.toString())
+        exchange.response.headers.location = truidLoginUrl
         if (xRequestedWith == "XMLHttpRequest") {
-            exchange.response.statusCode = HttpStatus.ACCEPTED
+            // Return a 202 response in case of an AJAX request
+            exchange.response.statusCode = ACCEPTED
         } else {
-            exchange.response.statusCode = HttpStatus.FOUND
+            // Return a 302 response in case of browser redirect
+            exchange.response.statusCode = FOUND
         }
     }
 
@@ -128,8 +117,8 @@ class TruidLoginSessionFlow(
                 // Exchange code for access token and refresh token
                 val tokenResponse = webClient.post()
                     .uri(URIBuilder(truidTokenEndpoint).build())
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .accept(MediaType.APPLICATION_JSON)
+                    .contentType(APPLICATION_FORM_URLENCODED)
+                    .accept(APPLICATION_JSON)
                     .body(fromFormData(body))
                     .retrieve()
                     .awaitBody<TokenResponse>()
@@ -142,8 +131,8 @@ class TruidLoginSessionFlow(
                 val presentation = webClient
                     .get()
                     .uri(getPresentationUri)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${tokenResponse.accessToken}")
+                    .accept(APPLICATION_JSON)
+                    .headers { it.setBearerAuth(tokenResponse.accessToken) }
                     .retrieve()
                     .awaitBody<PresentationResponse>()
 
@@ -157,21 +146,21 @@ class TruidLoginSessionFlow(
             }
         }
 
-        if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
+        if (exchange.request.headers.accept.contains(TEXT_HTML)) {
             // Redirect to success page in the webapp flow
             exchange.response.headers.location = webSuccess
-            exchange.response.statusCode = HttpStatus.FOUND
+            exchange.response.statusCode = FOUND
             return null
         } else {
             // Return a 200 response in case of an AJAX request
-            exchange.response.statusCode = HttpStatus.OK
+            exchange.response.statusCode = OK
             return null
         }
     }
 
     @GetMapping(
         path = ["/api/user-info"],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
+        produces = [APPLICATION_JSON_VALUE]
     )
     suspend fun getUserInfo(
         exchange: ServerWebExchange
@@ -225,8 +214,8 @@ class TruidLoginSessionFlow(
 
             val refreshedTokenResponse = webClient.post()
                 .uri(URIBuilder(truidTokenEndpoint).build())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .accept(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_FORM_URLENCODED)
+                .accept(APPLICATION_JSON)
                 .body(fromFormData(body))
                 .retrieve()
                 .awaitBody<TokenResponse>()
@@ -242,16 +231,16 @@ class TruidLoginSessionFlow(
         exchange: ServerWebExchange
     ): Map<String, String>? {
         println("Handle forbidden: ${e.error}: ${e.message}")
-        if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
+        if (exchange.request.headers.accept.contains(TEXT_HTML)) {
             // Redirect to error page in the webapp flow
             exchange.response.headers.location =
                 URIBuilder(webFailure).addParameter("error", e.error).build()
-            exchange.response.statusCode = HttpStatus.FOUND
+            exchange.response.statusCode = FOUND
 
             return null
         } else {
             // Return a 403 response in case of an AJAX request
-            exchange.response.statusCode = HttpStatus.FORBIDDEN
+            exchange.response.statusCode = FORBIDDEN
 
             return mapOf(
                 "error" to e.error
@@ -264,50 +253,21 @@ class TruidLoginSessionFlow(
         e: Unauthorized,
         exchange: ServerWebExchange
     ): Map<String, String>? {
-        if (exchange.request.headers.accept.contains(MediaType.TEXT_HTML)) {
+        if (exchange.request.headers.accept.contains(TEXT_HTML)) {
             // Redirect to error page in the webapp flow
             exchange.response.headers.location =
                 URIBuilder(webFailure).addParameter("error", e.error).build()
-            exchange.response.statusCode = HttpStatus.FOUND
+            exchange.response.statusCode = FOUND
 
             return null
         } else {
             // Return a 401 response in case of an AJAX request
-            exchange.response.statusCode = HttpStatus.UNAUTHORIZED
+            exchange.response.statusCode = UNAUTHORIZED
 
             return mapOf(
                 "error" to e.error
             )
         }
-    }
-
-    private fun createOauth2State(session: WebSession): String {
-        return session.attributes.compute("oauth2-state") { _, _ ->
-            // Use state parameter to prevent CSRF,
-            // according to https://www.rfc-editor.org/rfc/rfc6749#section-10.12
-            base64url(random(20))
-        } as String
-    }
-
-    private fun verifyOauth2State(session: WebSession, state: String?): Boolean {
-        val savedState = session.attributes.remove("oauth2-state") as String?
-        return savedState != null && state != null && state == savedState
-    }
-
-    private fun createOauth2CodeChallenge(session: WebSession): String {
-        val codeVerifier = session.attributes.compute("oauth2-code-verifier") { _, _ ->
-            // Create code verifier,
-            // according to https://www.rfc-editor.org/rfc/rfc7636#section-4.1
-            base64url(random(32))
-        } as String
-
-        // Create code challenge,
-        // according to https://www.rfc-editor.org/rfc/rfc7636#section-4.2
-        return base64url(sha256(codeVerifier))
-    }
-
-    private fun getOauth2CodeVerifier(session: WebSession): String? {
-        return session.attributes["oauth2-code-verifier"] as String?
     }
 
     private fun clearUserSession(session: WebSession) {
