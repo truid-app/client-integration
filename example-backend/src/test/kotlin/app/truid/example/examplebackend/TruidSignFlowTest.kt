@@ -27,7 +27,6 @@ import org.springframework.test.context.ActiveProfiles
 import java.net.HttpCookie
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
 
 @AutoConfigureWireMock(port = 0)
 @SpringBootTest(webEnvironment = RANDOM_PORT, classes = [FixedDateTimeProviderConfig::class])
