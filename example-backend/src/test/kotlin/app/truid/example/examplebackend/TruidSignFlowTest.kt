@@ -43,11 +43,8 @@ class TruidSignFlowTest {
     @Autowired
     lateinit var clock: FixedDateTimeProvider
 
-    lateinit var requestUri: String
-
     @BeforeEach
     fun `setup par`() {
-        requestUri = UUID.randomUUID().toString()
         stubFor(
             post(urlEqualTo("/oauth2/v1/par/sign")).willReturn(
                 aResponse()
