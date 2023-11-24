@@ -53,6 +53,9 @@ class TruidSignFlow(
     @Value("\${oauth2.truid.sign-endpoint}")
     val truidSignEndpoint: String,
 
+    @Value("\${oauth2.truid.sign-par-endpoint}")
+    val truidSignParEndpoint: String,
+
     @Value("\${oauth2.truid.token-endpoint}")
     val truidTokenEndpoint: String,
 
@@ -90,23 +93,40 @@ class TruidSignFlow(
         val session = exchange.session.awaitSingle()
         val document = getDocument()
 
+        // Initiate Pushed Authorized Request (PAR)
+        val body = LinkedMultiValueMap<String, String>()
+        body.add("response_type", "code")
+        body.add("client_id", clientId)
+        body.add("client_secret", clientSecret)
+        body.add("scope", "truid.app/data-point/email")
+        body.add("redirect_uri", "$publicDomain/truid/v1/complete-sign")
+        body.add("state", createOauth2State(session))
+        body.add("code_challenge", createOauth2CodeChallenge(session))
+        body.add("code_challenge_method", "S256")
+        body.add("user_message", "Please sign this document")
+        body.add("data_object_id", "$publicDomain/documents/Agreement.pdf")
+        body.add("data_object_digest", base64url(sha256(document)))
+        body.add("data_object_digest_algorithm", "S256")
+        body.add("data_object_b64", "false")
+        body.add("data_object_content_type", "application/pdf")
+        body.add("signature_profile", "aes_jades_baseline_b-b")
+        body.add("jws_packaging", "detached")
+        body.add("jws_serialization", "compact")
+
+        println("Posting PAR request to: $truidSignParEndpoint")
+        val parResponse = webClient.post()
+            .uri(URIBuilder(truidSignParEndpoint).build())
+            .contentType(APPLICATION_FORM_URLENCODED)
+            .accept(APPLICATION_JSON)
+            .body(fromFormData(body))
+            .retrieve()
+            .awaitBody<ParResponse>()
+        println("Request URI: ${parResponse.requestUri}")
+
+        // Initiate OAuth2 authorization code flow
         val truidSignupUrl = URIBuilder(truidSignEndpoint)
-            .addParameter("response_type", "code")
             .addParameter("client_id", clientId)
-            .addParameter("scope", "truid.app/data-point/email")
-            .addParameter("redirect_uri", "$publicDomain/truid/v1/complete-sign")
-            .addParameter("state", createOauth2State(session))
-            .addParameter("code_challenge", createOauth2CodeChallenge(session))
-            .addParameter("code_challenge_method", "S256")
-            .addParameter("user_message", "Please sign this document")
-            .addParameter("data_object_id", "$publicDomain/documents/Agreement.pdf")
-            .addParameter("data_object_digest", base64url(sha256(document)))
-            .addParameter("data_object_digest_algorithm", "S256")
-            .addParameter("data_object_b64", "false")
-            .addParameter("data_object_content_type", "application/pdf")
-            .addParameter("signature_profile", "aes_jades_baseline_b-b")
-            .addParameter("jws_packaging", "detached")
-            .addParameter("jws_serialization", "compact")
+            .addParameter("request_uri", parResponse.requestUri)
             .build()
 
         exchange.response.headers.location = truidSignupUrl

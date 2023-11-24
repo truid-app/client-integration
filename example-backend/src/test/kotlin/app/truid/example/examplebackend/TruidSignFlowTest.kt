@@ -1,13 +1,16 @@
 package app.truid.example.examplebackend
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.findAll
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.matching
 import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.verify
 import org.apache.http.client.utils.URIBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -39,8 +42,26 @@ class TruidSignFlowTest {
     @Autowired
     lateinit var clock: FixedDateTimeProvider
 
+    @BeforeEach
+    fun `setup par`() {
+        stubFor(
+            post(urlEqualTo("/oauth2/v1/par/sign")).willReturn(
+                aResponse()
+                    .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .withStatus(200)
+                    .withJsonBody(
+                        mapOf(
+                            "request_uri" to "request-uri",
+                            "expires_in" to 60
+                        )
+                    )
+            )
+        )
+    }
+
     @Nested
-    inner class ConfirmSignEndpoint {
+    inner class SignEndpoint {
+
         @Test
         fun `It should redirect to Truid authorization endpoint`() {
             val res = rest.exchange(
@@ -54,9 +75,8 @@ class TruidSignFlowTest {
             assertEquals("https", url.scheme)
             assertEquals("api.truid.app", url.host)
             assertEquals("/oauth2/v1/authorize/sign", url.path)
-            assertEquals("code", url.getParam("response_type"))
+            assertEquals("request-uri", url.getParam("request_uri"))
             assertEquals("test-client-id", url.getParam("client_id"))
-            assertNotNull(url.getParam("scope"))
         }
 
         @Test
@@ -73,7 +93,7 @@ class TruidSignFlowTest {
         }
 
         @Test
-        fun `It should add a state parameter to the returned URL`() {
+        fun `It should add a state parameter to PAR request`() {
             val res = rest.exchange(
                 RequestEntity.get("/truid/v1/sign")
                     .build(),
@@ -81,8 +101,10 @@ class TruidSignFlowTest {
             )
             assertEquals(302, res.statusCodeValue)
 
-            val url = URIBuilder(res.location())
-            assertNotNull(url.getParam("state"))
+            verify(
+                postRequestedFor(urlEqualTo("/oauth2/v1/par/sign"))
+                    .withRequestBody(matching(".*state=[a-zA-Z0-9_-]*&.*"))
+            )
         }
 
         @Test
@@ -94,10 +116,10 @@ class TruidSignFlowTest {
             )
             assertEquals(302, res.statusCodeValue)
 
-            val url = URIBuilder(res.location())
-            assertNotNull(url.getParam("code_challenge"))
-            assertEquals(43, url.getParam("code_challenge")?.length)
-            assertEquals("S256", url.getParam("code_challenge_method"))
+            verify(
+                postRequestedFor(urlEqualTo("/oauth2/v1/par/sign"))
+                    .withRequestBody(matching(".*code_challenge=[a-zA-Z0-9_-]{43}&code_challenge_method=S256&.*"))
+            )
         }
 
         @Test
@@ -164,8 +186,13 @@ class TruidSignFlowTest {
             assertEquals(302, res.statusCodeValue)
 
             cookie = HttpCookie.parse(res.setCookie()).single()
-            val url = URIBuilder(res.location())
-            state = url.getParam("state")!!
+
+            // Extract the random state parameter from the request
+            val request = findAll(
+                postRequestedFor(urlEqualTo("/oauth2/v1/par/sign"))
+            ).first().bodyAsString
+            val (stateValue) = ".*state=([a-zA-Z0-9_-]*)&.*".toRegex().find(request)!!.destructured
+            state = stateValue
         }
 
         @Test
@@ -348,8 +375,13 @@ class TruidSignFlowTest {
             assertEquals(302, res.statusCodeValue)
 
             cookie = HttpCookie.parse(res.setCookie()).single()
-            val url = URIBuilder(res.location())
-            state = url.getParam("state")!!
+
+            // Extract the random state parameter from the request
+            val request = findAll(
+                postRequestedFor(urlEqualTo("/oauth2/v1/par/sign"))
+            ).first().bodyAsString
+            val (stateValue) = ".*state=([a-zA-Z0-9_-]*)&.*".toRegex().find(request)!!.destructured
+            state = stateValue
         }
 
         @Test

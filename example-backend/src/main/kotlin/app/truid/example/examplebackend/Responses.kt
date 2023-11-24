@@ -13,6 +13,12 @@ data class TokenResponse(
     val tokenType: String,
     val scope: String
 )
+data class ParResponse(
+    @JsonProperty("request_uri")
+    val requestUri: String,
+    @JsonProperty("expires_in")
+    val expiresIn: Long
+)
 data class PresentationResponse(
     val sub: String,
     val claims: List<PresentationResponseClaims>
