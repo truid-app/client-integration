@@ -8,7 +8,7 @@ See full documentation at https://developer.truid.app
 
 ### example-backend
 
-This is an example project showing how to access the Truid REST API from a backend service to read data. This example is written using Kotlin and `spring-boot`, but should be easy enough to understand to know how to access the Truid REST API using any lanuguage and technology.
+This is an example project showing how to access the Truid REST API from a backend service to read data. This example is written using Kotlin and `spring-boot`, but should be easy enough to understand to know how to access the Truid REST API using any language and technology.
 
 Build:
 
@@ -35,7 +35,7 @@ $ docker build . -t example-web
 
 Register a Service in Truid to obtain OAuth2 client credentials. The service need the following properties:
 - Test Service: `true`
-- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`, `http://localhost:8080/truid/v1/complete-login`
+- `redirect_uris`: `http://localhost:8080/truid/v1/complete-signup`, `http://localhost:8080/truid/v1/complete-login`, `http://localhost:8080/truid/v1/complete-sign`
 
 _Note:_
 
