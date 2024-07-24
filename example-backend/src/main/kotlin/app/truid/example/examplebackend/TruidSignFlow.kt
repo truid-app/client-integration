@@ -33,12 +33,14 @@ import java.security.GeneralSecurityException
 import java.security.cert.CertPathValidator
 import java.security.cert.CertificateFactory
 import java.security.cert.PKIXParameters
+import java.security.cert.PKIXRevocationChecker
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.Date
+import java.util.EnumSet
 
 class InvalidSignature(msg: String, cause: Throwable? = null) : Forbidden("invalid_signature", msg, cause)
 
@@ -259,10 +261,31 @@ class TruidSignFlow(
         val validator = CertPathValidator.getInstance("PKIX")
 
         try {
+            //
+            // Validate certificate chain, without checking CRL
+            //
             val params = PKIXParameters(trustAnchors)
             params.isRevocationEnabled = false // TBD: CRL not published yet
             params.date = verifyAt
             validator.validate(FACTORY.generateCertPath(chain), params)
+            println("Certificate chain is OK")
+
+            //
+            // Validate again using CRL on the certificates that has a CRL
+            // The root certificate and the subject certificate does not
+            // have CRLs
+            //
+            val revocationChecker = validator.revocationChecker as PKIXRevocationChecker
+            revocationChecker.options = EnumSet.of(
+                PKIXRevocationChecker.Option.PREFER_CRLS,
+                PKIXRevocationChecker.Option.NO_FALLBACK
+            )
+            val params2 = PKIXParameters(trustAnchors)
+            params2.addCertPathChecker(revocationChecker)
+            params2.date = verifyAt
+            val certsWithCrl = chain.subList(1, chain.size - 1)
+            validator.validate(FACTORY.generateCertPath(certsWithCrl), params2)
+            println("Certificate CRL is OK")
         } catch (e: GeneralSecurityException) {
             throw InvalidSignature("Invalid certificate chain", e)
         }
